@@ -604,6 +604,51 @@ margin-top: 1.5rem;
     font-size: larger;
     font-weight: bolder;
 }
+.frequent-questions {
+    margin-top: 2rem;
+    padding: 1rem;
+    border-radius: 8px;
+    background-color: #f9f9f9; /* Light background to separate the area */
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+.frequent-questions h5 {
+    font-size: 1.1rem;
+    margin-bottom: 0.75rem;
+    color: #555; /* Darker heading color */
+    text-align: left; /* Adjust as needed */
+}
+
+.frequent-questions .suggestion-list {
+    padding: 0;
+    margin: 0;
+    list-style: none;
+}
+ .frequent-questions .suggestion-list li {
+    padding: 0.5rem 0;
+    cursor: pointer;
+    transition: color 0.2s ease-in-out, background-color 0.2s ease-in-out;
+    border-bottom: 1px solid #eee; /* Visual separation between items */
+    font-size: 0.9rem;
+    color: #337ab7; /* Link color */
+}
+
+.frequent-questions .suggestion-list li:last-child {
+    border-bottom: none; /* Remove border on the last item */
+}
+
+.frequent-questions .suggestion-list li:hover {
+    color: #23527c; /* Darker link color on hover */
+    background-color: #f0f0f0; /* Light background color on hover */
+}
+.contextual-suggestion {
+    cursor: pointer;
+    color: #4285f4;
+    transition: color 0.3s ease; /* Smooth transition for color change */
+}
+
+.contextual-suggestion:hover {
+    color: #3367d6; /* Darker blue on hover */
+}
 
 .typing-area {
     position: fixed;

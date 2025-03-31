@@ -408,6 +408,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const scrollUpButton = document.getElementById('scrollUp');
     const scrollDownButton = document.getElementById('scrollDown');
     const sendButton = document.querySelector(".typing-form .icon");
+    const inputElement = typingForm.querySelector(".typing-input");
     
          
 
@@ -417,6 +418,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentGroup = 1;
     let isPaused = false;
     let currentTypingInterval;
+    
 
     // Store original text for language switching
     document.querySelectorAll('.suggestion .text').forEach(suggestion => {
@@ -513,16 +515,25 @@ document.addEventListener('DOMContentLoaded', () => {
             showTypingEffect(simpleResponse, textElement, incomingMessageDiv);
             return;
         }
+        // Format conversation for API request
+        let conversationString = "";
+        for (const turn of conversationHistory) {
+            conversationString += `${turn.role}: ${turn.content}\n`;
+        }
 
         // Add language parameter to the API request
         const apiBody = {
             contents: [{
                 role: "user",
                 parts: [{
-                    text: `As an SRM University assistant, provide information about: ${userMessage} in ${currentLanguage} language. 
-                          Include specific details and keep the response focused on official university information.`
-                }]
-            }]
+                    text: `As an SRM University assistant, with conversation history, answer the new question as well As an SRM University assistant, consider our conversation history:
+        ${conversationString}
+
+        Now, answer the user's new question: ${userMessage} in ${currentLanguage} language.
+                           Include specific details and keep the response focused on official university information.`
+                 }]
+             }]
+            
         };
 
         try {
@@ -607,6 +618,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 clearInterval(typingInterval);
                 isResponseGenerating = false;
                 messageDiv.classList.remove("loading");
+                displayContextualSuggestions(messageDiv, userMessage);
 
                 if (messageDiv.classList.contains("incoming")) {
                     const copyButton = messageDiv.querySelector(".icon");
@@ -725,10 +737,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="loading-bar"></div>
                     <div class="loading-bar"></div>
                 </div>
+                 </div>
+                 <div class="frequent-questions">
+                  <h5>Related Questions:</h5>
                 <ul class="suggestion-list" id="contextual-suggestions">
                     <!-- Suggestions will be dynamically added here -->
                 </ul>
-            </div>
+
             <span class="icon material-symbols-rounded hide" onclick="copyMessage(this)">content_copy</span>
         `;
 
@@ -752,6 +767,7 @@ document.addEventListener('DOMContentLoaded', () => {
             listItem.addEventListener("click", () => {
                 // When clicked, put suggestion into the typing area
                 document.querySelector(".typing-input").value = suggestion;
+                handleOutgoingChat()
             });
             suggestionList.appendChild(listItem);
         });
