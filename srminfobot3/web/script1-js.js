@@ -8,6 +8,9 @@ const API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-
 let userMessage = null;
 let isResponseGenerating = false;
 let currentLanguage = 'en'; // Default language
+let conversationHistory = [];
+const maxHistoryLength = 5; // number of turns
+let queryFrequency = {};
 
 // Translations for multi-language support
 const translations = {
@@ -377,6 +380,19 @@ const copyMessage = (copyBtn) => {
     copyBtn.textContent = "done";
     setTimeout(() => copyBtn.textContent = "content_copy", 1500);
 };
+const allSuggestions = [
+    "Admission Process",
+    "Fees structure for ECE",
+    "Course Offerings",
+    "Student Life",
+    "Research Programs",
+    "Campus Life",
+    "Alumni Network",
+    "Academic Calendar",
+    "Library Resources",
+    "Sports Facilities",
+    "Health Services",
+   ];
 
 // Add event listener after DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
@@ -615,88 +631,131 @@ document.addEventListener('DOMContentLoaded', () => {
 
     }
    }
+   const generateContextualSuggestions = (query) => {
+    const lowerQuery = query.toLowerCase();
+    let suggestions = [];
+   
+    if (lowerQuery.includes("admission")) {
+        suggestions.push("What are the eligibility criteria?", "How can I apply?", "What documents do I need?");
+    } else if (lowerQuery.includes("fees")) {
+        suggestions.push("What is the fee structure for ECE?", "Are there any scholarships available?", "What payment methods are accepted?");
+    } else if (lowerQuery.includes("course")) {
+        suggestions.push("What are the core subjects?", "Is there industry exposure?", "Are there any electives?");
+    } else if (lowerQuery.includes("placement")) {
+        suggestions.push("Which companies recruit from SRM?", "What is the average salary package?", "How is the placement training?");
+    }
+    // Add some random suggestions to make sure it always has something
+    const allSuggestions = [
+        "Tell me about campus life",
+        "What research opportunities are there?",
+        "How is the faculty?",
+        "How is the infrastructure",
+        "Is there a hospital in campus?"
+    ]
+    while (suggestions.length < 3 && allSuggestions.length > 0) {
+        const randIndex = Math.floor(Math.random() * allSuggestions.length);
+        suggestions.push(allSuggestions[randIndex]);
+        allSuggestions.splice(randIndex, 1); // prevent repeats
+    }
+   
+    return suggestions;
+   };
 
-    // Handle outgoing chat
-    const handleOutgoingChat = () => {
-        const inputElement = typingForm.querySelector(".typing-input");
-        userMessage = inputElement.value.trim() || userMessage;
-        if (!userMessage || isResponseGenerating) return;
+    
+     // Handle outgoing chat
+  const handleOutgoingChat = () => {
+    const inputElement = typingForm.querySelector(".typing-input");
+    userMessage = inputElement.value.trim() || userMessage;
+    if (!userMessage || isResponseGenerating) return;
 
-        isResponseGenerating = true;
-        isPaused = false;
+    isResponseGenerating = true;
 
+    const html = `
+        <div class="message-content">
+            <img src="images/user.jpg" alt="User Avatar" class="avatar">
+            <p class="text">${userMessage}</p>
+        </div>
+    `;
+
+    const outgoingMessageDiv = createMessageElement(html, true);
+    chatList.appendChild(outgoingMessageDiv);
+    inputElement.value = '';
+
+    document.body.classList.add("hide-header");
+    chatList.scrollTo(0, chatList.scrollHeight);
+    // Append user message to history
+    conversationHistory.push({ role: "user", content: userMessage });
+    if (conversationHistory.length > maxHistoryLength) {
+        conversationHistory.shift(); // remove the oldest entry
+    }
+    queryFrequency[userMessage] = (queryFrequency[userMessage] || 0) + 1;
+    const simpleResponse = processQuery(userMessage);
+    if (simpleResponse){
         const html = `
             <div class="message-content">
-                <img src="images/user.jpg" alt="User Avatar" class="avatar">
-                <p class="text">${userMessage}</p>
+                <img src="images/gemini.svg" alt="Bot Avatar" class="avatar">
+                <p class="text"></p>
+                <div class="loading-indicator">
+                    <div class="loading-bar"></div>
+                    <div class="loading-bar"></div>
+                    <div class="loading-bar"></div>
+                </div>
             </div>
+            <span class="icon material-symbols-rounded hide" onclick="copyMessage(this)">content_copy</span>
         `;
 
-        const outgoingMessageDiv = createMessageElement(html, true);
-        chatList.appendChild(outgoingMessageDiv);
-        inputElement.value = '';
+        const incomingMessageDiv = createMessageElement(html, false);
+        showTypingEffect(simpleResponse, incomingMessageDiv.querySelector(".text"), incomingMessageDiv);
+        chatList.appendChild(incomingMessageDiv)
 
-        document.body.classList.add("hide-header");
-        chatList.scrollTo(0, chatList.scrollHeight);
-        /*setTimeout(showLoadingAnimation, 500);*/
-        const simpleResponse = processQuery(userMessage);
-        if (simpleResponse){
-            const html = `
-                <div class="message-content">
-                    <img src="images/gemini.svg" alt="Bot Avatar" class="avatar">
-                    <p class="text"></p>
-                    <div class="loading-indicator">
-                        <div class="loading-bar"></div>
-                        <div class="loading-bar"></div>
-                        <div class="loading-bar"></div>
-                    </div>
-                </div>
-                <span class="icon material-symbols-rounded hide" onclick="copyMessage(this)">content_copy</span>
-            `;
-
-            const incomingMessageDiv = createMessageElement(html, false);
-            showTypingEffect(simpleResponse, incomingMessageDiv.querySelector(".text"), incomingMessageDiv);
-            chatList.appendChild(incomingMessageDiv)
-
-        }else{
-           setTimeout(showLoadingAnimation, 500);
-       }
-     };
+    }else{
+       setTimeout(showLoadingAnimation, 500);
+   }
+};
     
 
     // Show Loading Animation
     const showLoadingAnimation = () => {
         const html = `
-        <div class="message-content">
-            <img src="images/gemini.svg" alt="Bot Avatar" class="avatar">
-            <p class="text"></p>
-            <div class="loading-indicator">
--                    <div class="loading-bar"></div>
-+                    <div class="loading-bar"></div>
-                <div class="loading-bar"></div>
-                <div class="loading-bar"></div>
+            <div class="message-content">
+                <img src="images/gemini.svg" alt="Bot Avatar" class="avatar">
+                <p class="text"></p>
+                <div class="loading-indicator">
+                    <div class="loading-bar"></div>
+                    <div class="loading-bar"></div>
+                    <div class="loading-bar"></div>
+                </div>
+                <ul class="suggestion-list" id="contextual-suggestions">
+                    <!-- Suggestions will be dynamically added here -->
+                </ul>
             </div>
-        </div>
-        <span class="icon material-symbols-rounded hide" onclick="copyMessage(this)">content_copy</span>
-    `;
-   const incomingMessageDiv = createMessageElement(html, false);
-   incomingMessageDiv.classList.add("loading");
-   
-   const textElement = incomingMessageDiv.querySelector(".text");
+            <span class="icon material-symbols-rounded hide" onclick="copyMessage(this)">content_copy</span>
+        `;
 
-// Apply inline styles for gradient text effect
-   /*textElement.style.background = "linear-gradient(45deg, #000000)";
-   textElement.style.webkitBackgroundClip = "text";  // For WebKit browsers
-   textElement.style.backgroundClip = "text";  
-   textElement.style.webkitTextFillColor = "transparent";  // Makes the non-gradient part transparent
-   textElement.style.fontWeight = "bold"; 
-   textElement.style.fontSize = "1.2rem"; */
-  
+        const incomingMessageDiv = createMessageElement(html, false);
+        incomingMessageDiv.classList.add("loading");
         showTypingEffect("Bot is thinking...", incomingMessageDiv.querySelector(".text"), incomingMessageDiv);
-   chatList.appendChild(incomingMessageDiv);
-   chatList.scrollTo(0, chatList.scrollHeight);
-   generateAPIResponse(incomingMessageDiv);
-};
+        chatList.appendChild(incomingMessageDiv);
+        chatList.scrollTo(0, chatList.scrollHeight);
+        displayContextualSuggestions(incomingMessageDiv, userMessage);
+        generateAPIResponse(incomingMessageDiv);
+    };
+    const displayContextualSuggestions = (messageDiv, query) => {
+        const suggestions = generateContextualSuggestions(query);
+        const suggestionList = messageDiv.querySelector("#contextual-suggestions");
+        suggestionList.innerHTML = ""; // Clear existing suggestions
+
+        suggestions.forEach(suggestion => {
+            const listItem = document.createElement("li");
+            listItem.textContent = suggestion;
+            listItem.classList.add("contextual-suggestion");
+            listItem.addEventListener("click", () => {
+                // When clicked, put suggestion into the typing area
+                document.querySelector(".typing-input").value = suggestion;
+            });
+            suggestionList.appendChild(listItem);
+        });
+    };
     // Suggestion Group Management
     const hideAllGroups = () => {
         [suggestionsGroup1, suggestionsGroup2, suggestionsGroup3].forEach(group => {
@@ -726,6 +785,30 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // ========================= Event Listeners =========================
+    inputElement.addEventListener("input", () => {
+        const inputText = inputElement.value.toLowerCase();
+        const filteredSuggestions = allSuggestions.filter(suggestion => suggestion.toLowerCase().startsWith(inputText));
+        displayAutocompleteSuggestions(filteredSuggestions);
+       });
+       
+       const displayAutocompleteSuggestions = (suggestions) => {
+        const suggestionList = document.getElementById("autocomplete-list");
+        suggestionList.innerHTML = ""; // clear any existing
+       
+        suggestions.forEach(suggestion => {
+            const listItem = document.createElement("li");
+            listItem.textContent = suggestion;
+            listItem.classList.add("autocomplete-item");
+            listItem.addEventListener("click", () => {
+                inputElement.value = suggestion;
+                suggestionList.innerHTML = ""; // clear list when selected
+            });
+            suggestionList.appendChild(listItem);
+        });
+       
+        // Show or hide list based on content
+        suggestionList.style.display = suggestions.length > 0 ? "block" : "none";
+       };
        //Adding Listener to send button
    sendButton.addEventListener('click', (e) => {
     if(sendButton.textContent === "pause" || sendButton.textContent === "play_arrow"){
