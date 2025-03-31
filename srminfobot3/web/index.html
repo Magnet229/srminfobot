@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SRM InfoBot</title>
+    <link rel="stylesheet" href="styles-css.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+<body>
+    <div class="motto">Learn • Leap • Lead</div>
+    <div class="logo-section">
+        <h2 class="title">SRM INFOBOT</h2>
+        <h4 class="subtitle">Your University Guide</h4>
+    </div>
+    <header class="header">
+        <div class="language-selector">
+            <select id="languageSelect" class="language-dropdown">
+                <option value="en">English</option>
+                <option value="ta">தமிழ்</option>
+                <option value="te">తెలుగు</option>
+                <option value="ml">മലയാളം</option>
+            </select>
+        </div>
+        <div class="header-content">
+            <img src="Srmseal.png" alt="SRM Seal" class="srm-seal">
+        </div>
+        <!-- Replace the existing suggestions section with this -->
+        <div class="suggestions-wrapper">
+            <div class="suggestions-container" id="suggestions-group-1">
+                <ul class="suggestion-list">
+                    <li class="suggestion" data-image="images/1.png">
+                        <span class="icon material-symbols-rounded">school</span>
+                        <h4 class="text" >Admission Process</h4>
+                    </li>
+                    <li class="suggestion" data-image="images/2.png">
+                        <span class="icon material-symbols-rounded">apartment</span>
+                        <h4 class="text">Campus Life</h4>
+                    </li>
+                    <li class="suggestion" data-image="images/3.jpg">
+                        <span class="icon material-symbols-rounded">computer</span>
+                        <h4 class="text">Academic Portal</h4>
+                    </li>
+                    <li class="suggestion" data-image="images/4.jpg">
+                        <span class="icon material-symbols-rounded">work</span>
+                        <h4 class="text">Placements</h4>
+                    </li>
+                </ul>
+            </div>
+        
+            <div class="suggestions-container" id="suggestions-group-2">
+                <ul class="suggestion-list">
+                    <li class="suggestion" data-image="images/5.jpg">
+                        <span class="icon material-symbols-rounded">school_bell</span>
+                        <h4 class="text">Course Offerings</h4>
+                    </li>
+                    <li class="suggestion" data-image="images/6.jpg">
+                        <span class="icon material-symbols-rounded">groups</span>
+                        <h4 class="text">Student Life</h4>
+                    </li>
+                    <li class="suggestion" data-image="images/7.jpg">
+                        <span class="icon material-symbols-rounded">history_edu</span>
+                        <h4 class="text">Research Programs</h4>
+                    </li>
+                    <li class="suggestion" data-image="images/8.jpg">
+                        <span class="icon material-symbols-rounded">diversity_3</span>
+                        <h4 class="text">Alumni Network</h4>
+                    </li>
+                    
+                    
+                </ul>
+            </div>
+            <div class="suggestions-container" id="suggestions-group-3">
+                <ul class="suggestion-list">
+                    <li class="suggestion" data-image="images/9.jpg">
+                        <span class="icon material-symbols-rounded">date_range</span>
+                        <h4 class="text">Academic Calendar</h4>
+                    </li>
+                    <li class="suggestion" data-image="images/10.jpg">
+                        <span class="icon material-symbols-rounded">local_library</span>
+                        <h4 class="text">Library Resources</h4>
+                    </li>
+                    <li class="suggestion" data-image="images/11.jpg">
+                        <span class="icon material-symbols-rounded">sports_score</span>
+                        <h4 class="text">Sports Facilities</h4>
+                    </li>
+                    <li class="suggestion" data-image="images/12.jpg">
+                        <span class="icon material-symbols-rounded">health_and_safety</span>
+                        <h4 class="text">Health Services</h4>
+                    </li>
+                </ul>
+            </div>
+        
+            <!-- Moved scroll button outside of suggestion containers -->
+            <div class="scroll-button-wrapper">
+                <button id="scrollUp" class="icon material-symbols-rounded">expand_less</button>
+                <button id="scrollDown" class="icon material-symbols-rounded">expand_more</button>
+            </div>
+    </header>
+
+    <div class="chat-list"></div>
+
+    <div class="typing-area">
+        <form action="#" class="typing-form">
+            <div class="input-wrapper">
+                <input type="text" placeholder="Ask anything about SRM University..." class="typing-input" required>
+                <button class="icon material-symbols-rounded">send</button>
+            </div>
+            <div class="action-buttons">
+                <span id="toggle-theme-button" class="icon material-symbols-rounded">light_mode</span>
+                <span id="delete-chat-button" class="icon material-symbols-rounded">delete</span>
+            </div>
+        </form>
+        <p class="disclaimer-text">
+            SRM InfoBot - Your 24/7 University Assistant
+        </p>
+    </div>
+
+    <script src="script1-js.js"></script>
+</body>
+</html>
