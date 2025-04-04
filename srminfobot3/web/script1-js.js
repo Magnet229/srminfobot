@@ -508,6 +508,7 @@ document.addEventListener('DOMContentLoaded', () => {
             showTypingEffect("I'm sorry, I couldn't process your message. Please try again.", textElement, incomingMessageDiv);
             return;
         }
+        queryFrequency[userMessage] = (queryFrequency[userMessage] || 0) + 1;
 
         const simpleResponse = processQuery(userMessage);
 
@@ -655,6 +656,8 @@ document.addEventListener('DOMContentLoaded', () => {
         suggestions.push("What are the core subjects?", "Is there industry exposure?", "Are there any electives?");
     } else if (lowerQuery.includes("placement")) {
         suggestions.push("Which companies recruit from SRM?", "What is the average salary package?", "How is the placement training?");
+    }else if (lowerQuery.includes("health service")) {
+        suggestions.push("What are the timings of the SRM Hospital?", "Where is the SRM hospital located", "How many doctors are in the hospital?");
     }
     // Add some random suggestions to make sure it always has something
     const allSuggestions = [
