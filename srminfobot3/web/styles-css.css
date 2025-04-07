@@ -528,30 +528,6 @@ margin-top: 1.5rem;
         background-position: 800px 0;
     }
 }
-#autocomplete-list {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    right: 0;
-    background-color: white;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    padding: 0;
-    margin: 0;
-    list-style: none;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    z-index: 10;
-    display: none; /* Hidden by default */
-}
-
-.autocomplete-item {
-    padding: 10px;
-    cursor: pointer;
-}
-
-.autocomplete-item:hover {
-    background-color: #f0f0f0;
-}
 .message {
     margin-bottom: 2rem; /* Increased spacing between messages */
     display: flex;
@@ -670,8 +646,17 @@ margin-top: 1.5rem;
 
 .input-wrapper {
     flex: 1;
-    display: flex;
-    gap: 1rem;
+    display: flex; /* Keep wrapper as flex */
+    background: var(--background-light); /* White background for input */
+    border: 1px solid var(--border-color);
+    border-radius: 25px; /* Pill shape */
+    padding: 0.3rem 0.3rem 0.3rem 1rem; /* Padding around input and buttons */
+    box-shadow: 0 1px 3px var(--shadow-light);
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+.input-wrapper:focus-within { /* Style wrapper when input inside is focused */
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(66, 133, 244, 0.2);
 }
 
 .typing-input {
@@ -736,148 +721,214 @@ margin-top: 1.5rem;
     font-weight:bolder ;
 }
 
-/* ✅ For Tablets (Max 768px) */
-@media (max-width: 768px) {
-    .title {
-        font-size: 2rem;
-        text-align: center;
-        margin-bottom: 10px; /* Added spacing */
+@media (max-width: 1024px) {
+    .main-content {
+        width: 98%; /* Slightly wider */
+        gap: 1rem;
     }
-
-    .motto {
-        font-size: 1.8rem;
-        text-align: center;
-        margin-bottom: 15px;
-    }
-
-    .message .message-content {
-        max-width: 90%;
-    }
-
-    .typing-form {
-        padding: 0.5rem;
-        flex-direction: column;  
-        align-items: center;
-    }
-
-    .header-content {
-        transform: translateY(-100%);
-        text-align: center;
-    }
-    .header-content {
-        transform: translate(-110px,-180px);
-    }
-    .header-content img {
-        opacity: 0.2;
-    }
-    .language-selector {
-        transform: translate(200px,-40px); 
-    }
-
-    .logo-section {
-        transform: translateY(-40%);
-        text-align: center;
-    }
-    
-    .suggestion-list {
-        display: flex;
-        flex-wrap: wrap; /* Allow items to wrap */
-        justify-content: center;
-        gap: 10px;
-        margin-top: 300px;
-    }
-    
-    .suggestion {
-        width: 45%;
-        height: auto;
-        text-align: center;
-    }
-    .header-content {
-        transform: translateX(-220px);
-        transform: translateY(-50px);
-    }
-    .message.outgoing .message-content {
-        position: relative;
-        right: 35%;
-        width: 100%;
+    .suggestions-wrapper {
+        flex-basis: 180px; /* Narrower suggestion sidebar */
     }
     .message .message-content {
-        position: relative;
-        right: 5%;
+        max-width: 80%;
     }
+    .typing-area {
+        padding: 0.8rem 1rem;
+    }
+    .header-content {
+        padding-left: 0; /* Remove specific padding */
+        padding-right: 0;
+    }
+     .title { font-size: 2.2rem; }
+     .subtitle { font-size: 1.1rem; }
+     .motto { font-size: 2.2rem; }
 }
 
-/* ✅ For Mobile Devices (Max 480px) */
-@media (max-width: 480px) {
-    .title {
-        font-size: 1.6rem;
+
+/* Tablet Portrait (~768px) */
+@media (max-width: 768px) {
+    .header-content {
+        flex-direction: column; /* Stack logo/title and extras */
+        align-items: center; /* Center items */
         text-align: center;
     }
-
-    .motto {
-        font-size: 1.4rem;
-        text-align: center;
-    }
-
-    .message .message-content {
-        max-width: 95%;
-    }
-
-    .suggestion-list {
-        flex-direction: column;
+     .logo-section {
+        width: 100%; /* Take full width */
+     }
+    .header-extras {
+        width: 100%;
+        flex-direction: row; /* Lang selector and seal side-by-side */
+        justify-content: space-between; /* Space them out */
         align-items: center;
-        margin-top: 140px;
     }
+    .srm-seal {
+         width: 60px;
+         height: 60px;
+     }
+    .main-content {
+        flex-direction: column; /* Stack suggestions above chat */
+        width: 100%;
+        padding: 0 1rem; /* Add horizontal padding */
+        padding-bottom: 110px; /* Ensure space for typing area */
+    }
+    .suggestions-wrapper {
+        flex-basis: auto; /* Reset basis */
+        width: 100%; /* Full width */
+        padding-top: 0;
+        margin-bottom: 1rem; /* Space below suggestions */
+        position: relative; /* Make sure it contains the absolute positioned groups */
+        min-height: 150px; /* Give it some minimum height for the absolute elements */
+    }
+    .suggestion-list {
+        /* Consider making suggestions horizontal scrolling on mobile? */
+        /* Or just show fewer */
+        max-width: 100%; /* Allow full width */
+        margin: 0;
+    }
+    .suggestions-container {
+        position: relative; /* Change from absolute for stacking */
+        opacity: 1; /* Make all visible initially (JS needs to handle hiding/showing differently if stacking) */
+        visibility: visible;
+        pointer-events: auto;
+        /* OR keep absolute/toggle logic, but ensure wrapper has height */
+    }
+     /* If keeping toggle, hide non-active ones */
+     .suggestions-container:not(.active) {
+        display: none;
+     }
 
     .suggestion {
-        width: 60%;
-        height: 150px;
-        text-align: center;
-        padding: 10px;
-        font-size: 0.9rem;
+        /* Adjust suggestion style for horizontal layout if desired */
+        min-height: 60px; /* Smaller min height */
+        padding: 0.8rem;
     }
-    .header-content {
-        transform: translate(-110px,-180px);
+    .scroll-button-wrapper {
+        justify-content: center; /* Center buttons */
+        margin-top: 0.5rem;
+        position: static; /* Static position */
     }
-    .header-content img {
-        opacity: 0.2;
-    }
-    .language-selector {
-        transform: translate(200px,-40px); 
-    }
-
-    .typing-input {
-        width: 100%;
-        font-size: 1rem;
-        padding: 12px;
+    .chat-list-wrapper {
+        padding-top: 0;
     }
     .chat-list {
-        transform: translateY(-40px);
-        width: 100%;
-        max-width: 1200px; /* Ensures it doesn’t get too wide */
-        height: calc(100vh - 150px); /* Adjust height dynamically */
-        overflow-y: auto; /* Enables scrolling if needed */
-        scrollbar-color: #999 transparent; /* Custom scrollbar */
-        padding: 1rem;
-        margin: 0 auto; /* Centers the chatlist */
-    }
-
-    
-
-    .action-buttons {
-        justify-content: center;
-        display: flex;
-        gap: 8px;
-    }
-    .message.outgoing .message-content {
-        position: relative;
-        right: 35%;
-        width: 100%;
+        padding: 0; /* Remove padding */
     }
     .message .message-content {
-        position: relative;
-        right: 15%;
+        max-width: 85%;
+    }
+    .typing-area {
+        padding: 0.5rem;
+    }
+    .typing-form {
+        gap: 0.5rem;
+    }
+    .input-wrapper {
+        padding: 0.2rem 0.2rem 0.2rem 0.8rem;
+    }
+    .icon-button, .action-buttons .icon-button {
+        width: 38px;
+        height: 38px;
+    }
+    .typing-input {
+        height: 40px;
+        padding: 0.5rem;
+    }
+    .title { font-size: 2rem; }
+    .motto { font-size: 1.8rem; }
+}
+
+
+/* Mobile Phones (~480px) */
+@media (max-width: 480px) {
+    body {
+        /* Prevent font size boosting */
+        -webkit-text-size-adjust: 100%;
+        -ms-text-size-adjust: 100%;
+    }
+    .header {
+        padding: 0.8rem 1rem;
+    }
+    .title { font-size: 1.6rem; }
+    .subtitle { font-size: 1rem; }
+    .motto { font-size: 1.5rem; padding: 0.8rem; }
+
+    .srm-seal {
+        width: 50px;
+        height: 50px;
+    }
+    .language-dropdown {
+        font-size: 0.8rem;
+        padding: 0.4rem 0.6rem;
     }
 
-    
+    .main-content {
+        padding: 0 0.5rem; /* Less padding */
+        padding-bottom: 100px; /* Adjust if typing area changes height */
+    }
+    .suggestion {
+        gap: 0.5rem;
+        padding: 0.6rem;
+        min-height: 50px;
+    }
+    .suggestion .icon {
+        width: 30px;
+        height: 30px;
+        min-width: 30px;
+        font-size: 1rem;
+    }
+    .suggestion .text {
+        font-size: 0.85rem;
+    }
+    .suggestion-button {
+        width: 35px;
+        height: 35px;
+    }
+
+    .message {
+        margin-bottom: 1rem;
+    }
+    .message .message-content {
+        max-width: 90%;
+        padding: 0.6rem 1rem;
+        gap: 0.5rem;
+    }
+     .message .avatar {
+         width: 30px;
+         height: 30px;
+     }
+    .message .text {
+        font-size: 0.95rem;
+    }
+
+    .typing-area {
+        padding: 0.5rem;
+        background: rgba(255, 255, 255, 0.9); /* Less blur needed? */
+        backdrop-filter: blur(5px);
+        -webkit-backdrop-filter: blur(5px);
+    }
+    .input-wrapper {
+        padding-left: 0.6rem;
+    }
+    .typing-input {
+        font-size: 0.95rem;
+        height: 38px; /* Match button height */
+    }
+    .icon-button, .action-buttons .icon-button {
+        width: 35px;
+        height: 35px;
+        font-size: 1.1rem;
+    }
+    .disclaimer-text {
+        font-size: 0.75rem;
+        margin-top: 0.5rem;
+    }
+    .notification-popup {
+        width: calc(100% - 20px); /* Near full width */
+        bottom: 10px;
+        right: -100%; /* Adjust off-screen position */
+        padding: 0.8rem;
+    }
+    .notification-popup.show {
+        right: 10px;
+    }
 }
