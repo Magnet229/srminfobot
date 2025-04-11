@@ -376,49 +376,84 @@ document.addEventListener('DOMContentLoaded', () => {
     // Generate Response (Simple or API)
     const generateResponse = async (incomingMessageDiv) => {
         const textElement = incomingMessageDiv.querySelector(".text");
+        const loadingIndicator = incomingMessageDiv.querySelector(".loading-indicator"); // Get loading indicator
 
+        if (!textElement) {
+             console.error("Cannot find text element in incoming message div:", incomingMessageDiv);
+             isResponseGenerating = false;
+             sendButton.textContent = 'send';
+             sendButton.disabled = false;
+             return;
+        }
         if (!userMessage) {
-            showTypingEffect("Sorry, I didn't get that. Could you please rephrase?", textElement, incomingMessageDiv);
+            // Handle case where userMessage is somehow null
+            console.error("User message is null or empty.");
+            showTypingEffect("Sorry, I couldn't process your request.", textElement, incomingMessageDiv);
             return;
         }
 
-        // 1. Try Simple Response / Predefined Answers
-        const simpleResponse = processSimpleQuery(userMessage);
-        if (simpleResponse) {
-            showTypingEffect(simpleResponse, textElement, incomingMessageDiv);
-             // Update conversation history for simple responses too
-             conversationHistory.push({ role: "model", content: simpleResponse });
-             if (conversationHistory.length > MAX_HISTORY_LENGTH * 2) { // Keep history balanced
-                 conversationHistory.splice(0, 2);
-             }
-            return; // Don't proceed to API if simple response is found
-        }
+        console.log(`Sending query to Flask: ${userMessage}, Language: ${currentLanguage}`); // Log outgoing query
 
-        // 2. Try Knowledge Base (Flask API)
-        let knowledgeBaseResponse = null;
         try {
-            const kbResponse = await fetch(`${FLASK_BASE_URL}/api/query-knowledge-base`, {
+            // --- Only Call Flask Knowledge Base Endpoint ---
+            const flaskResponse = await fetch(`${FLASK_BASE_URL}/api/query-knowledge-base`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ query: userMessage, language: currentLanguage })
             });
-            if (kbResponse.ok) {
-                const kbData = await kbResponse.json();
-                if (kbData && kbData.response) {
-                     knowledgeBaseResponse = kbData.response;
-                     // Clean response: replace newlines for display, remove markdown
-                     //const formattedResponse = knowledgeBaseResponse.replace(/\n/g, '<br>').replace(/[#*]/g, '');
-                     showTypingEffect(knowledgeBaseResponse, textElement, incomingMessageDiv); // Use raw response for typing effect
-                     // Update history
-                     conversationHistory.push({ role: "model", content: knowledgeBaseResponse });
-                     if (conversationHistory.length > MAX_HISTORY_LENGTH * 2) conversationHistory.splice(0, 2);
-                     return; // Don't proceed to Gemini if KB answered
-                 }
+
+            console.log("Flask Response Status:", flaskResponse.status); // Log status
+
+            if (!flaskResponse.ok) {
+                // Log detailed error if Flask response is not OK
+                let errorText = `Flask API request failed with status ${flaskResponse.status}`;
+                try {
+                    const errorData = await flaskResponse.json();
+                    console.error("Flask Error Response Body:", errorData);
+                    errorText += `: ${errorData.message || 'Unknown error'}`;
+                } catch (e) {
+                     // Handle cases where the error response isn't valid JSON
+                     const rawErrorText = await flaskResponse.text();
+                     console.error("Flask Non-JSON Error Response Body:", rawErrorText);
+                     errorText += ' - Non-JSON response received.';
+                }
+                throw new Error(errorText);
             }
+
+            const data = await flaskResponse.json();
+            console.log("Received data from Flask:", data); // Log successful data
+
+            if (data && data.response) {
+                // Success! Show the response from Flask (which might be from KB or Gemini)
+                // Ensure loading indicator is hidden before typing starts
+                if (loadingIndicator) loadingIndicator.style.display = 'none';
+                showTypingEffect(data.response, textElement, incomingMessageDiv);
+                // Update conversation history
+                conversationHistory.push({ role: "model", content: data.response });
+                 if (conversationHistory.length > MAX_HISTORY_LENGTH * 2) conversationHistory.splice(0, 2);
+
+            } else {
+                // Handle cases where Flask returned success but no 'response' field
+                console.error("Flask response missing 'response' field:", data);
+                throw new Error("Received invalid data structure from backend.");
+            }
+            // --- End of Flask Call Logic ---
+
         } catch (error) {
-            console.warn("Knowledge base request failed or returned no answer:", error);
-            // Continue to Gemini API
+            // Catch errors from the fetch call itself or from handling the response
+            console.error("Error generating response:", error);
+            const errorMessages = {
+                en: "Apologies, I couldn't fetch a response right now. Please check the connection or try again.",
+                ta: "மன்னிக்கவும், தற்போது பதிலைப் பெற முடியவில்லை. இணைப்பைச் சரிபார்க்கவும் அல்லது மீண்டும் முயற்சிக்கவும்.",
+                te: "క్షమించండి, ప్రస్తుతం ప్రతిస్పందనను పొందలేకపోయాము. దయచేసి కనెక్షన్‌ని తనిఖీ చేయండి లేదా మళ్లీ ప్రయత్నించండి.",
+                ml: "ക്ഷമിക്കണം, ഇപ്പോൾ ഒരു പ്രതികരണം നേടാൻ കഴിഞ്ഞില്ല. ദയവായി കണക്ഷൻ പരിശോധിക്കുക അല്ലെങ്കിൽ വീണ്ടും ശ്രമിക്കുക."
+            };
+             // Ensure loading indicator is hidden on error
+             if (loadingIndicator) loadingIndicator.style.display = 'none';
+            showTypingEffect(errorMessages[currentLanguage] || errorMessages.en, textElement, incomingMessageDiv);
+            if(textElement) textElement.classList.add("error"); // Add error class for styling
         }
+     // End of generateResponse function
 
 
         // 3. Fallback to Gemini API
@@ -510,8 +545,14 @@ document.addEventListener('DOMContentLoaded', () => {
         // 2. Clear input and update history
         inputElement.value = '';
         inputElement.style.height = 'auto'; // Reset height after sending
-        autocompleteList.innerHTML = ""; // Clear autocomplete
-        autocompleteList.style.display = "none";
+        if (autocompleteList) {
+            autocompleteList.innerHTML = ""; // Clear autocomplete
+            autocompleteList.style.display = "none";
+        } else {
+            console.warn("Autocomplete list element not found.");
+        }
+        //autocompleteList.innerHTML = ""; // Clear autocomplete
+        //autocompleteList.style.display = "none";
         conversationHistory.push({ role: "user", content: userMessage });
         if (conversationHistory.length > MAX_HISTORY_LENGTH * 2) {
             conversationHistory.shift(); // Keep history trimmed (user message)
@@ -600,7 +641,7 @@ document.addEventListener('DOMContentLoaded', () => {
             autocompleteList.appendChild(listItem);
         });
 
-        autocompleteList.style.display = "block";
+        autocompleteList.style.display = suggestions.length > 0 ? "block" : "none";
     };
 
      // Auto-resize textarea
