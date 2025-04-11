@@ -351,8 +351,27 @@ body {
     border-bottom-right-radius: 5px;
     flex-direction: row-reverse; /* Avatar on right */
 }
+.message.outgoing .message-content .text {
+    color: var(--light-text-color); /* Explicitly set outgoing text color */
+    text-align: left;
+}
 .message.incoming .message-content {
      border-bottom-left-radius: 5px;
+}
+.message.incoming .message-content {
+    border-bottom-left-radius: 5px; /* Speech bubble tail effect */
+    background: var(--background-light); /* Keep background light (or change if desired) */
+    /* Example: Add a subtle border if needed */
+    /* border: 1px solid var(--border-color); */
+}
+
+/* --- Add/Modify this rule --- */
+.message.incoming .message-content .text {
+   color: #202124; /* Example: A dark grey color (Google's style) */
+   /* Or choose another color like: */
+   /* color: #0056b3; */ /* A dark blue */
+   /* color: var(--dark-text-color); */ /* Use your existing variable if suitable */
+   font-weight: 400; /* Ensure normal font weight */
 }
 
 

@@ -3,7 +3,7 @@
 document.addEventListener('DOMContentLoaded', () => {
     // === Constants ===
     const FLASK_BASE_URL = 'http://localhost:5000'; // Replace if different
-    const API_KEY = "YOUR_GEMINI_API_KEY"; // Replace with your actual API key
+    const API_KEY = "AIzaSyDAK3gTEiJFynqHm7-jvrL-ePM_YoHHbpM"; // Replace with your actual API key
     const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`;
     const MAX_HISTORY_LENGTH = 5; // Number of conversation turns to remember
     const TYPING_SPEED_FACTOR = 10; // Words per second approx (lower number = faster typing)
@@ -32,6 +32,37 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentSuggestionGroup = 1; // Track active suggestion group (1, 2, or 3)
     let isTypingPaused = false;
     let currentTypingInterval = null;
+    // === Event Listeners (Add this helper function) ===
+    // Helper function to handle suggestion clicks
+    const handleSuggestionClick = (clickedSuggestionElement) => {
+        // Get the text *currently displayed* in the suggestion
+        const currentText = clickedSuggestionElement.querySelector(".text")?.textContent?.trim();
+        if (!currentText) {
+            console.warn("Could not get text from clicked suggestion:", clickedSuggestionElement);
+            return;
+        }
+
+        console.log(`Suggestion clicked: "${currentText}"`); // Log clicked text
+
+        // --- Determine the base query ---
+        // Find the English text using the data-original-text attribute
+        const originalEnglishText = clickedSuggestionElement.getAttribute('data-original-text');
+
+        // Map specific suggestions if needed (like Health Services)
+        if (originalEnglishText === "Health Services") {
+           userMessage = "Tell me about SRM Hospital and its medical services";
+           console.log("Mapping 'Health Services' to query:", userMessage);
+        } else {
+           // Use the original English text as the base query for consistency,
+           // or use the current displayed text if preferred.
+           // Using originalEnglishText is often better for backend processing.
+           userMessage = originalEnglishText || currentText; // Fallback to current text if attribute is missing
+           console.log("Using suggestion text as query:", userMessage);
+        }
+
+        inputElement.value = currentText; // Put the *displayed* text in the input box for user visibility
+        handleOutgoingChat(); // Trigger chat submission
+   };
 
     // === Translations (Keep as is) ===
     const translations = {
@@ -66,9 +97,183 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // === Keywords & Predefined Data (Keep as is) ===
-    const srmKeywords = [ /* ... keep your extensive list ... */ 'srm hospital', 'medical center', 'health service' ];
-    const conversationPatterns = { /* ... keep as is ... */ };
-    const srmPredefinedAnswers = { /* ... keep as is ... */ };
+    const srmKeywords = [ 'srm', 'university', 'college', 'campus', 'department', 'faculty',
+    'course', 'program', 'semester', 'academic', 'study', 'research',
+    'lecture', 'class', 'laboratory', 'lab', 'library', 'examination',
+    'exam', 'test', 'assignment', 'project', 'grade', 'result',
+    'attendance', 'syllabus', 'curriculum', 'timetable', 'schedule',
+    'admission', 'application', 'enrollment', 'registration', 'fee',
+    'scholarship', 'financial aid', 'document', 'certificate',
+    'eligibility', 'criteria', 'requirement', 'deadline', 'payment',
+    'hostel', 'accommodation', 'dormitory', 'cafeteria', 'canteen',
+    'mess', 'food', 'transport', 'bus', 'shuttle', 'parking',
+    'security', 'facility', 'amenity', 'infrastructure', 'wifi',
+    'internet', 'lab', 'equipment', 'sports', 'gym', 'fitness',
+    'student', 'staff', 'faculty', 'teacher', 'professor', 'dean',
+    'advisor', 'counselor', 'mentor', 'support', 'help', 'guidance',
+    'office', 'department', 'administration', 'management',
+    'placement', 'career', 'internship', 'job', 'recruitment',
+    'company', 'industry', 'corporate', 'salary', 'package',
+    'interview', 'training', 'skill', 'development',
+    'hospital', 'health', 'medical', 'clinic', 'healthcare', 'emergency',
+    'doctor', 'physician', 'ambulance', 'pharmacy', 'medicine', 'treatment',
+    'srm hospital', 'medical center', 'health service', 'health care',
+    'medical facility', 'emergency care', 'outpatient', 'inpatient','srm hospital', 'medical center', 'health service' ];
+    const conversationPatterns = { greetings: ['hi', 'hello', 'hey', 'greetings', 'good morning', 'good afternoon', 'good evening'],
+        farewells: ['bye', 'goodbye', 'see you', 'thank you', 'thanks'],
+        help: ['help', 'assist', 'support', 'guide', 'what can you do', 'how can you help'] };
+    const srmPredefinedAnswers = {  en: {
+        admissions: `SRM University admissions process involves:
+- Online application through the SRM website
+- Entrance exam (SRMJEEE)
+- Merit-based selection
+- Document verification
+- Fee payment to confirm admission
+- Orientation program before classes begin`,
+
+        placements: `SRM University has an excellent placement record:
+- 85%+ placement rate across programs
+- 600+ companies visit campus annually
+- Average package of 5-6 LPA
+- Top recruiters include Microsoft, Amazon, IBM, TCS
+- Pre-placement training provided
+- Dedicated placement cell for student support`,
+
+        campus: `SRM University campus features:
+- Modern classrooms with smart technology
+- Well-equipped laboratories
+- Central library with digital resources
+- Multiple hostels for boys and girls
+- Food courts and cafeterias
+- Sports facilities including swimming pool
+- Wi-Fi enabled campus
+- Medical center for healthcare`,
+
+        hospital: `SRM Hospital is a state-of-the-art medical facility that provides:
+- 24/7 emergency medical services
+- Outpatient and inpatient care
+- Advanced diagnostic facilities
+- Specialized departments for various medical needs
+- Well-equipped pharmacy
+- Ambulance services
+- Regular health check-up camps
+- Modern operation theaters
+- Qualified medical professionals and staff`
+    },
+    ta: {
+        admissions: `SRM பல்கலைக்கழக சேர்க்கை செயல்முறையில் அடங்கும்:
+- SRM இணையதளம் மூலம் ஆன்லைன் விண்ணப்பம்
+- நுழைவுத் தேர்வு (SRMJEEE)
+- தகுதி அடிப்படையிலான தேர்வு
+- ஆவண சரிபார்ப்பு
+- சேர்க்கையை உறுதிப்படுத்த கட்டணம் செலுத்துதல்
+- வகுப்புகள் தொடங்குவதற்கு முன் அறிமுக நிகழ்ச்சி`,
+
+        placements: `SRM பல்கலைக்கழகம் சிறந்த வேலைவாய்ப்பு பதிவைக் கொண்டுள்ளது:
+- அனைத்து திட்டங்களிலும் 85%+ வேலைவாய்ப்பு விகிதம்
+- ஆண்டுதோறும் 600+ நிறுவனங்கள் வளாகத்திற்கு வருகை
+- சராசரி பேக்கேஜ் 5-6 LPA
+- முன்னணி நிறுவனங்களில் Microsoft, Amazon, IBM, TCS போன்றவை அடங்கும்
+- வேலைவாய்ப்புக்கு முந்தைய பயிற்சி வழங்கப்படுகிறது
+- மாணவர் ஆதரவுக்கான அர்ப்பணிப்புள்ள வேலைவாய்ப்பு பிரிவு`,
+
+        campus: `SRM பல்கலைக்கழக வளாகத்தில் உள்ளவை:
+- நவீன தொழில்நுட்பத்துடன் கூடிய நவீன வகுப்பறைகள்
+- நன்கு வசதிகள் கொண்ட ஆய்வகங்கள்
+- டிஜிட்டல் வளங்களுடன் கூடிய மைய நூலகம்
+- ஆண், பெண் இருவருக்கும் பல விடுதிகள்
+- உணவு அரங்குகள் மற்றும் கஃபேட்டீரியாக்கள்
+- நீச்சல் குளம் உட்பட விளையாட்டு வசதிகள்
+- வை-ஃபை செயல்படுத்தப்பட்ட வளாகம்
+- சுகாதார பராமரிப்புக்கான மருத்துவ மையம்`,
+
+        hospital: `SRM மருத்துவமனை ஒரு நவீன மருத்துவ வசதியாகும்:
+- 24/7 அவசர மருத்துவ சேவைகள்
+- வெளிநோயாளி மற்றும் உள்நோயாளி பராமரிப்பு
+- மேம்பட்ட நோயறிதல் வசதிகள்
+- பல்வேறு மருத்துவ தேவைகளுக்கான சிறப்பு துறைகள்
+- நன்கு வசதி கொண்ட மருந்தகம்
+- ஆம்புலன்ஸ் சேவைகள்
+- வழக்கமான உடல்நல பரிசோதனை முகாம்கள்
+- நவீன அறுவை சிகிச்சை அரங்குகள்
+- தகுதி வாய்ந்த மருத்துவ நிபுணர்கள் மற்றும் ஊழியர்கள்`
+    },
+    te: {
+        admissions: `SRM విశ్వవిద్యాలయ ప్రవేశ ప్రక్రియలో ఉన్నవి:
+- SRM వెబ్‌సైట్ ద్వారా ఆన్‌లైన్ దరఖాస్తు
+- ప్రవేశ పరీక్ష (SRMJEEE)
+- మెరిట్ ఆధారిత ఎంపిక
+- డాక్యుమెంట్ వెరిఫికేషన్
+- ప్రవేశాన్ని నిర్ధారించడానికి ఫీజు చెల్లింపు
+- తరగతులు ప్రారంభానికి ముందు ఓరియంటేషన్ ప్రోగ్రామ్`,
+
+        placements: `SRM విశ్వవిద్యాలయానికి ఉత్తమమైన ప్లేస్‌మెంట్ రికార్డు ఉంది:
+- అన్ని ప్రోగ్రాముల్లో 85%+ ప్లేస్‌మెంట్ రేటు
+- సంవత్సరానికి 600+ కంపెనీలు క్యాంపస్‌కు వస్తాయి
+- సగటు ప్యాకేజీ 5-6 LPA
+- టాప్ రిక్రూటర్లలో Microsoft, Amazon, IBM, TCS వంటివి ఉన్నాయి
+- ప్రీ-ప్లేస్‌మెంట్ ట్రైనింగ్ అందించబడుతుంది
+- విద్యార్థులకు మద్దతు కోసం అంకితమైన ప్లేస్‌మెంట్ సెల్`,
+
+        campus: `SRM విశ్వవిద్యాలయ క్యాంపస్‌లో ఉన్నవి:
+- స్మార్ట్ టెక్నాలజీతో ఆధునిక తరగతి గదులు
+- బాగా సజ్జితమైన ల్యాబొరేటరీలు
+- డిజిటల్ వనరులతో సెంట్రల్ లైబ్రరీ
+- బాలురు మరియు బాలికల కోసం బహుళ హాస్టళ్లు
+- ఫుడ్ కోర్టులు మరియు కేఫేటేరియాలు
+- స్విమ్మింగ్ పూల్ సహా క్రీడా సౌకర్యాలు
+- వైఫై ఎనేబుల్డ్ క్యాంపస్
+- ఆరోగ్య సంరక్షణ కోసం మెడికల్ సెంటర్`,
+
+        hospital: `SRM హాస్పిటల్ ఒక అత్యాధునిక వైద్య సౌకర్యం:
+- 24/7 అత్యవసర వైద్య సేవలు
+- బయట రోగులు మరియు లోపల రోగుల సంరక్షణ
+- అధునాతన డయాగ్నొస్టిక్ సౌకర్యాలు
+- వివిధ వైద్య అవసరాల కోసం ప్రత్యేక విభాగాలు
+- బాగా అమర్చబడిన ఫార్మసీ
+- అంబులెన్స్ సేవలు
+- క్రమం తప్పకుండా ఆరోగ్య తనిఖీ శిబిరాలు
+- ఆధునిక ఆపరేషన్ థియేటర్లు
+- అర్హత కలిగిన వైద్య నిపుణులు మరియు సిబ్బంది`
+    },
+    ml: {
+        admissions: `SRM സർവ്വകലാശാല അഡ്മിഷൻ പ്രക്രിയയിൽ ഉൾപ്പെടുന്നവ:
+- SRM വെബ്സൈറ്റ് വഴി ഓൺലൈൻ അപേക്ഷ
+- പ്രവേശന പരീക്ഷ (SRMJEEE)
+- മെറിറ്റ് അടിസ്ഥാനമാക്കിയുള്ള തിരഞ്ഞെടുപ്പ്
+- രേഖകളുടെ പരിശോധന
+- പ്രവേശനം സ്ഥിരീകരിക്കാൻ ഫീസ് അടയ്ക്കൽ
+- ക്ലാസുകൾ ആരംഭിക്കുന്നതിന് മുമ്പ് ഓറിയന്റേഷൻ പ്രോഗ്രാം`,
+
+        placements: `SRM സർവ്വകലാശാലയ്ക്ക് മികച്ച പ്ലേസ്മെന്റ് റെക്കോർഡ് ഉണ്ട്:
+- എല്ലാ പ്രോഗ്രാമുകളിലും 85%+ പ്ലേസ്മെന്റ് നിരക്ക്
+- വർഷംതോറും 600+ കമ്പനികൾ ക്യാമ്പസ് സന്ദർശിക്കുന്നു
+- ശരാശരി പാക്കേജ് 5-6 LPA
+- Microsoft, Amazon, IBM, TCS തുടങ്ങിയവ ടോപ് റിക്രൂട്ടർമാരിൽ ഉൾപ്പെടുന്നു
+- പ്രീ-പ്ലേസ്മെന്റ് പരിശീലനം നൽകുന്നു
+- വിദ്യാർത്ഥികളുടെ പിന്തുണയ്ക്കായി സമർപ്പിത പ്ലേസ്മെന്റ് സെൽ`,
+
+        campus: `SRM സർവ്വകലാശാല ക്യാമ്പസിൽ ഉള്ളത്:
+- സ്മാർട്ട് സാങ്കേതികവിദ്യയുള്ള ആധുനിക ക്ലാസ് മുറികൾ
+- നല്ല സജ്ജീകരണങ്ങളുള്ള ലാബുകൾ
+- ഡിജിറ്റൽ വിഭവങ്ങളുള്ള സെൻട്രൽ ലൈബ്രറി
+- ആൺകുട്ടികൾക്കും പെൺകുട്ടികൾക്കുമായി ഒന്നിലധികം ഹോസ്റ്റലുകൾ
+- ഫുഡ് കോർട്ടുകളും കാഫേറ്റീരിയകളും
+- സ്വിമ്മിംഗ് പൂൾ ഉൾപ്പെടെയുള്ള കായിക സൗകര്യങ്ങൾ
+- വൈഫൈ സജ്ജമാക്കിയ ക്യാമ്പസ്
+- ആരോഗ്യ പരിപാലനത്തിനായുള്ള മെഡിക്കൽ സെന്റർ`,
+
+        hospital: `SRM ഹോസ്പിറ്റൽ ഒരു അത്യാധുനിക മെഡിക്കൽ സൗകര്യമാണ്:
+- 24/7 അടിയന്തിര മെഡിക്കൽ സേവനങ്ങൾ
+- ഔട്ട്പേഷ്യന്റ്, ഇൻപേഷ്യന്റ് പരിചരണം
+- വിപുലമായ രോഗനിർണയ സൗകര്യങ്ങൾ
+- വിവിധ മെഡിക്കൽ ആവശ്യങ്ങൾക്കായുള്ള സ്പെഷ്യലൈസ്ഡ് ഡിപ്പാർട്ട്മെന്റുകൾ
+- നന്നായി സജ്ജീകരിച്ച ഫാർമസി
+- ആംബുലൻസ് സേവനങ്ങൾ
+- പതിവ് ആരോഗ്യ പരിശോധനാ ക്യാമ്പുകൾ
+- ആധുനിക ഓപ്പറേഷൻ തിയേറ്ററുകൾ
+- യോഗ്യതയുള്ള മെഡിക്കൽ വിദഗ്ധരും ജീവനക്കാരും`
+    } };
     const allSuggestionsTexts = [ /* ... keep your list of suggestion texts ... */ ]; // Used for autocomplete
 
 
@@ -81,25 +286,35 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error("Language not found in translations:", lang);
             return;
         }
+        console.log("Updating UI Language to:", lang); // Log update
         inputElement.placeholder = translations[lang].placeholder;
         disclaimerText.textContent = translations[lang].welcome;
 
         // Update static suggestions based on matching English text
-        document.querySelectorAll('.suggestion .text').forEach(suggestionSpan => {
+        document.querySelectorAll('.suggestion').forEach(suggestionElement => {
+            const suggestionSpan = suggestionElement.querySelector(".text");
+            if (!suggestionSpan) return; 
             const originalEnglishText = suggestionSpan.getAttribute('data-original-text');
+            if (!originalEnglishText) {
+                console.warn("Suggestion missing 'data-original-text' attribute:", suggestionElement);
+                return;
+            }
             const suggestionKey = Object.keys(translations.en.suggestions).find(
                 key => translations.en.suggestions[key] === originalEnglishText
             );
 
             if (suggestionKey && translations[lang].suggestions[suggestionKey]) {
                 suggestionSpan.textContent = translations[lang].suggestions[suggestionKey];
+                console.log(`Translated "${originalEnglishText}" to "${suggestionSpan.textContent}" for lang ${lang}`);
             } else {
                 // Fallback if no translation found
                  suggestionSpan.textContent = originalEnglishText;
+                 console.log(`Translation not found for "${originalEnglishText}" in lang ${lang}. Using English.`);
             }
-        });
+        }); console.log("UI Language update complete for:", lang);
          // Optionally update any dynamically added elements or notifications if needed
     }
+    
 
     // Show Welcome Notification
     const showWelcomeNotification = () => {
@@ -171,9 +386,20 @@ document.addEventListener('DOMContentLoaded', () => {
     
 
     // Create Message Element
-    const createMessageElement = (content, className) => {
+    const createMessageElement = (content, classNames) => {
         const messageDiv = document.createElement("div");
-        messageDiv.classList.add("message", className); // e.g., "incoming" or "outgoing"
+        messageDiv.classList.add("message"); // e.g., "incoming" or "outgoing"
+        if (classNames) {
+            // Split the string by spaces and add each class individually
+            classNames.split(' ').forEach(cls => {
+                if (cls) { // Check for empty strings if there are multiple spaces
+                    messageDiv.classList.add(cls.trim());
+                }
+            });
+            // OR using spread syntax if classNames is already an array:
+            // messageDiv.classList.add(...classNames);
+        }
+
         messageDiv.innerHTML = content;
         return messageDiv;
     };
@@ -188,8 +414,14 @@ document.addEventListener('DOMContentLoaded', () => {
             navigator.clipboard.writeText(messageText)
                 .then(() => {
                     copyBtn.textContent = "done"; // Feedback icon
-                    setTimeout(() => copyBtn.textContent = "content_copy", 1500);
-                })
+                    requestAnimationFrame(() => {
+                        setTimeout(() => {
+                            if(copyBtn) copyBtn.textContent = "content_copy"; // Check if btn still exists
+                        }, 1500);
+                    });
+               })
+               
+                
                 .catch(err => console.error('Failed to copy text: ', err));
         } else {
             console.error("Could not find text to copy.");
@@ -220,6 +452,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
         return null; // No simple response found
     };
+    const formatBotResponse = (response) => {
+        // Remove asterisks
+        response = response.replace(/ /g, ' ');
+        response = response.replace(/[#*]/g, '');
+        
+        // If response contains bullet points, format them with proper spacing
+        if (response.includes('- ')) {
+            const lines = response.split('\n');
+            const formattedLines = lines.map(line => {
+                if (line.trim().startsWith('- ')) {
+                    // Add extra indentation and spacing for bullet points
+                    return '\n' + line.trim() + '\n';
+                }
+                return line;
+            });
+            return formattedLines.join('\n');
+        }
+        
+        return response;
+    };
 
      // Check if there is a predefined answer
      const checkPredefinedAnswer = (message, lang = 'en') => {
@@ -242,7 +494,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     // Format Bot Response Text
-    const formatBotResponse = (response) => {
+    /*const formatBotResponse = (response) => {
         // Basic cleanup: remove extra asterisks, maybe excessive newlines
         response = response.replace(/\*{2,}/g, '*'); // Replace multiple * with single
         response = response.replace(/#/g, '');     // Remove #
@@ -250,7 +502,7 @@ document.addEventListener('DOMContentLoaded', () => {
         response = response.replace(/^\s*[\-\*]\s+/gm, '\n • '); // Basic list conversion
         response = response.replace(/\n{3,}/g, '\n\n'); // Limit consecutive newlines
         return response.trim();
-    };
+    };*/
 
     // Show Typing Effect
     const showTypingEffect = (text, textElement, messageDiv) => {
@@ -296,8 +548,9 @@ document.addEventListener('DOMContentLoaded', () => {
                  sendButton.disabled = false; // Ensure button is enabled
 
                 // Show copy button if it exists
-                const copyButton = messageDiv.querySelector(".icon.material-symbols-rounded"); // More specific selector
-                if (copyButton) copyButton.classList.remove("hide");
+                const copyButton = messageDiv.querySelector(".copy-button"); // Use the class selector
+                if (copyButton) {
+                copyButton.classList.remove("hide");}
 
                 // Save chat history
                 localStorage.setItem("savedChats", chatList.innerHTML);
@@ -565,35 +818,37 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // Show Bot Loading and Trigger Response Generation
-    const showBotLoadingAndGenerate = () => {
-        const botHtml = `
-            <div class="message-content">
-                <img src="images/gemini.svg" alt="Bot" class="avatar">
-                <div class="loading-indicator"> <!-- Loading bars shown initially -->
-                    <div class="loading-bar"></div>
-                    <div class="loading-bar"></div>
-                    <div class="loading-bar"></div>
-                </div>
-                <p class="text"></p> <!-- Text element for typing effect -->
-            </div>
-            <!-- Add copy button, hidden initially -->
-            <span class="icon material-symbols-rounded hide" onclick="copyMessage(this)">content_copy</span>
-
-             <!-- Contextual Suggestions Placeholder (Commented out) -->
-             <!--
-             <div id="contextual-suggestions-container" style="display: none;">
-                 <h5>Related Questions:</h5>
-                 <ul class="suggestion-list"></ul>
+    // Show Bot Loading and Trigger Response Generation
+const showBotLoadingAndGenerate = () => {
+    const botHtml = `
+        <div class="message-content">
+            <img src="images/gemini.svg" alt="Bot" class="avatar">
+             <div class="loading-indicator"> <!-- Loading bars -->
+                <div class="loading-bar"></div>
+                <div class="loading-bar"></div>
+                <div class="loading-bar"></div>
              </div>
-             -->
+            <p class="text"></p> <!-- *** TARGET FOR TYPING *** -->
+        </div>
+        <!-- Removed onclick, added a class 'copy-button' for selection -->
+        <span class="icon copy-button material-symbols-rounded hide">content_copy</span>
         `;
-        const incomingMessageDiv = createMessageElement(botHtml, "incoming loading"); // Add 'loading' class
-        chatList.appendChild(incomingMessageDiv);
-        chatList.scrollTop = chatList.scrollHeight;
+    const incomingMessageDiv = createMessageElement(botHtml, "incoming loading");
+    chatList.appendChild(incomingMessageDiv);
+    chatList.scrollTop = chatList.scrollHeight;
 
-        // 4. Start generating the actual response
-        generateResponse(incomingMessageDiv);
-    };
+    // Add the event listener AFTER appending the element
+    const copyBtn = incomingMessageDiv.querySelector(".copy-button");
+    if (copyBtn) {
+        copyBtn.addEventListener('click', () => copyMessage(copyBtn)); // Pass the button itself
+    } else {
+        console.warn("Copy button not found in bot message template.");
+    }
+
+
+    // Start generating the actual response
+    generateResponse(incomingMessageDiv);
+};
 
     // --- Suggestion Group Management (Using active class) ---
     const setActiveSuggestionGroup = (groupNumber) => {
@@ -709,18 +964,19 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Clicking on a Suggestion Item
-    document.querySelectorAll('.suggestion').forEach(suggestion => {
-        suggestion.addEventListener("click", () => {
-            const text = suggestion.querySelector(".text")?.textContent?.trim();
-             if (text) {
-                 // Use the clicked text directly or map specific ones
-                 userMessage = text === "Health Services"
-                               ? "Tell me about SRM Hospital and its medical services"
-                               : text;
-                 inputElement.value = userMessage; // Put in input box as well
-                 handleOutgoingChat(); // Trigger chat submission
-            }
-        });
+    document.querySelectorAll('.suggestion').forEach(suggestionElement => {
+        const textSpan = suggestionElement.querySelector(".text");
+        if (textSpan) {
+            // Store the initial English text in a data attribute
+            const originalText = textSpan.textContent.trim();
+            suggestionElement.setAttribute('data-original-text', originalText);
+
+            // Attach the click listener ONCE during initialization
+            suggestionElement.addEventListener('click', () => handleSuggestionClick(suggestionElement));
+             console.log(`Added listener for suggestion: "${originalText}"`);
+        } else {
+            console.warn("Suggestion element found without a '.text' span inside:", suggestionElement);
+        }
     });
 
     // Theme Toggle
@@ -748,13 +1004,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // ========================= Initialization =========================
     setActiveSuggestionGroup(1);
     console.log("Attempting to show welcome notification...");
+    updateUILanguage(languageSelect.value || 'en'); // Update based on initial dropdown value
     //showGroup(1);
     //updateButtonVisibility();
     showWelcomeNotification();
 });
 
 // Make copyMessage accessible globally
-window.copyMessage = copyMessage;
+//window.copyMessage = copyMessage;
 
 // Network Event Listeners for debugging
 window.addEventListener('offline', () => {
