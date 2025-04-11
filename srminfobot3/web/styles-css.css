@@ -565,8 +565,7 @@ body {
 }
 
 /* Specific button styles if needed */
-#send-button { /* Already styled by .icon-button */ }
-
+/*#send-button { /* Already styled by .icon-button */ 
 #toggle-theme-button, #delete-chat-button {
      background-color: #e0e0e0; /* Grey background */
      color: #555555; /* Dark grey icon */
@@ -682,10 +681,10 @@ body {
         /* Adjust body padding if typing area height changes significantly */
         padding-bottom: var(--typing-area-height);
     }
-    .header-content {
+    /*.header-content {
         /* Allow logo/title and extras to wrap if needed */
         /* justify-content: center; */ /* Optional: center if they wrap */
-    }
+    
     .header-extras {
         gap: 1rem; /* Reduce gap */
     }
@@ -714,9 +713,9 @@ body {
     }
 
     /* Suggestions stay as display: none/block via .active class */
-    .suggestions-container {
-        /* No changes needed here, JS controls visibility */
-    }
+    /*.suggestions-container {
+         No changes needed here, JS controls visibility */
+    
 
     .chat-list-wrapper {
         order: 2;           /* Chat second */
