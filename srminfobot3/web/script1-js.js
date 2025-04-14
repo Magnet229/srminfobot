@@ -3,8 +3,8 @@
 document.addEventListener('DOMContentLoaded', () => {
     // === Constants ===
     const FLASK_BASE_URL = 'http://localhost:5000'; // Replace if different
-    const API_KEY = "AIzaSyDAK3gTEiJFynqHm7-jvrL-ePM_YoHHbpM"; // Replace with your actual API key
-    const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`;
+    const API_KEY = "AIzaSyDAK3gTEiJFynqHm7-jvrL-ePM_YoHHbpM";
+    const API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
     const MAX_HISTORY_LENGTH = 5; // Number of conversation turns to remember
     const TYPING_SPEED_FACTOR = 10; // Words per second approx (lower number = faster typing)
 
@@ -32,7 +32,44 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentSuggestionGroup = 1; // Track active suggestion group (1, 2, or 3)
     let isTypingPaused = false;
     let currentTypingInterval = null;
+    let isPaused = false;
+    
     // === Event Listeners (Add this helper function) ===
+    const stopCurrentTypingAndReset = () => {
+        console.log("stopCurrentTypingAndReset called.");
+        if (currentTypingInterval) {
+            console.log("Clearing active typing interval:", currentTypingInterval);
+            clearInterval(currentTypingInterval);
+            currentTypingInterval = null;
+        } else {
+            console.log("No active typing interval to clear.");
+        }
+    
+        // Find the last incoming message which might still be "loading"
+        const lastMessage = chatList.querySelector('.message.incoming:last-child');
+        if (lastMessage && lastMessage.classList.contains('loading')) {
+            lastMessage.classList.remove('loading');
+            // Optionally add text indicating it was stopped, or just leave it partially typed
+            const textElement = lastMessage.querySelector('.text');
+            if (textElement && !textElement.textContent?.trim()) {
+                 textElement.textContent = "[Response stopped]"; // Example placeholder
+            }
+            console.log("Removed loading class from last message.");
+        }
+    
+        // Reset state flags
+        isResponseGenerating = false;
+        console.log("Reset state: isResponseGenerating=false");
+    
+        // Reset button appearance and enable it
+        sendButton.textContent = "send";
+        sendButton.disabled = false;
+        console.log("Reset button to 'send', disabled=false");
+    
+        // Save chat history - potentially with the partially typed/stopped message
+        localStorage.setItem("savedChats", chatList.innerHTML);
+    };
+    
     // Helper function to handle suggestion clicks
     const handleSuggestionClick = (clickedSuggestionElement) => {
         // Get the text *currently displayed* in the suggestion
@@ -93,6 +130,15 @@ document.addEventListener('DOMContentLoaded', () => {
             placeholder: "SRM സർവകലാശാലയെക്കുറിച്ച് എന്തെങ്കിലും ചോദിക്കൂ...",
             // ... other 'ml' translations
             suggestions: { admissionProcess: "പ്രവേശന നടപടിക്രമം", campusLife: "ക്യാമ്പസ് ജീവിതം", academicPortal: "അക്കാദമിക് പോർട്ടൽ", placements: "പ്ലേസ്‌മെന്റുകൾ", courseOfferings: "കോഴ്‌സ് ഓഫറുകൾ", studentLife: "വിദ്യാർത്ഥി ജീവിതം", researchPrograms: "ഗവേഷണ പരിപാടികൾ", alumniNetwork: "പൂർവ്വ വിദ്യാർത്ഥി ശൃംഖല", academicCalendar: "അക്കാദമിക് കലണ്ടർ", libraryResources: "ലൈബ്രറി വിഭവങ്ങൾ", sportsFacilities: "കായിക സൗകര്യങ്ങൾ", healthServices: "ആരോഗ്യ സേവനങ്ങൾ" }
+        },
+        hi: {
+            welcome: "SRM इन्फोबॉट - आपका 24/7 विश्वविद्यालय सहायक",
+            placeholder: "SRM विश्वविद्यालय के बारे में कुछ भी पूछें...",
+            suggestions: {
+                admissionProcess: "प्रवेश प्रक्रिया", campusLife: "कैंपस जीवन", academicPortal: "अकादमिक पोर्टल", placements: "प्लेसमेंट",
+                courseOfferings: "पाठ्यक्रम प्रस्ताव", studentLife: "छात्र जीवन", researchPrograms: "अनुसंधान कार्यक्रम", alumniNetwork: "पूर्व छात्र नेटवर्क",
+                academicCalendar: "अकादमिक कैलेंडर", libraryResources: "पुस्तकालय संसाधन", sportsFacilities: "खेल सुविधाएं", healthServices: "स्वास्थ्य सेवाएं"
+            }
         }
     };
 
@@ -274,7 +320,17 @@ document.addEventListener('DOMContentLoaded', () => {
 - ആധുനിക ഓപ്പറേഷൻ തിയേറ്ററുകൾ
 - യോഗ്യതയുള്ള മെഡിക്കൽ വിദഗ്ധരും ജീവനക്കാരും`
     } };
-    const allSuggestionsTexts = [ /* ... keep your list of suggestion texts ... */ ]; // Used for autocomplete
+    const allSuggestionsTexts = [ /* ... keep your list of suggestion texts ... */ 
+        "Admission Process", "Campus Life", "Academic Portal", "Placements",
+        "Course Offerings", "Student Life", "Research Programs", "Alumni Network",
+        "Academic Calendar", "Library Resources", "Sports Facilities", "Health Services",
+        // Add Hindi versions if you want them in autocomplete suggestions shown to user
+        "प्रवेश प्रक्रिया", "कैंपस जीवन", "अकादमिक पोर्टल", "प्लेसमेंट",
+        "पाठ्यक्रम प्रस्ताव", "छात्र जीवन", "अनुसंधान कार्यक्रम", "पूर्व छात्र नेटवर्क",
+        "अकादमिक कैलेंडर", "पुस्तकालय संसाधन", "खेल सुविधाएं", "स्वास्थ्य सेवाएं"
+        // ... other relevant terms in all languages ...
+    ];
+     // Used for autocomplete
 
 
     // === Core Functions ===
@@ -288,32 +344,52 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         console.log("Updating UI Language to:", lang); // Log update
         inputElement.placeholder = translations[lang].placeholder;
-        disclaimerText.textContent = translations[lang].welcome;
+        // Assuming 'welcome' translation key exists for the disclaimer title
+        if (translations[lang].welcome) {
+             disclaimerText.textContent = translations[lang].welcome;
+        } else {
+             console.warn(`Translation key 'welcome' missing for language: ${lang}`);
+             // Optional: Fallback text
+             disclaimerText.textContent = translations.en.welcome; // Fallback to English
+        }
+
 
         // Update static suggestions based on matching English text
         document.querySelectorAll('.suggestion').forEach(suggestionElement => {
             const suggestionSpan = suggestionElement.querySelector(".text");
-            if (!suggestionSpan) return; 
-            const originalEnglishText = suggestionSpan.getAttribute('data-original-text');
-            if (!originalEnglishText) {
-                console.warn("Suggestion missing 'data-original-text' attribute:", suggestionElement);
-                return;
+            if (!suggestionSpan) {
+                 console.warn("Suggestion element missing '.text' span:", suggestionElement);
+                 return; // Skip this suggestion if structure is wrong
             }
+
+            // *** FIX: Get the attribute from the correct element (suggestionElement) ***
+            const originalEnglishText = suggestionElement.getAttribute('data-original-text');
+
+            if (!originalEnglishText) {
+                // This warning now correctly points to the element that *should* have the attribute
+                console.warn("Suggestion element missing 'data-original-text' attribute:", suggestionElement);
+                return; // Skip if the original text wasn't stored
+            }
+
+            // Find the key matching the stored original English text
             const suggestionKey = Object.keys(translations.en.suggestions).find(
                 key => translations.en.suggestions[key] === originalEnglishText
             );
 
-            if (suggestionKey && translations[lang].suggestions[suggestionKey]) {
+            if (suggestionKey && translations[lang] && translations[lang].suggestions && translations[lang].suggestions[suggestionKey]) {
+                // Found key and translation exists for the current language
                 suggestionSpan.textContent = translations[lang].suggestions[suggestionKey];
-                console.log(`Translated "${originalEnglishText}" to "${suggestionSpan.textContent}" for lang ${lang}`);
+                // console.log(`Translated "${originalEnglishText}" to "${suggestionSpan.textContent}" for lang ${lang}`); // Keep for debugging if needed
             } else {
-                // Fallback if no translation found
-                 suggestionSpan.textContent = originalEnglishText;
-                 console.log(`Translation not found for "${originalEnglishText}" in lang ${lang}. Using English.`);
+                // Fallback if no key found or no translation exists for this language
+                suggestionSpan.textContent = originalEnglishText; // Revert to original English
+                // console.log(`Translation not found for "${originalEnglishText}" (key: ${suggestionKey}) in lang ${lang}. Using English.`); // Keep for debugging
             }
-        }); console.log("UI Language update complete for:", lang);
-         // Optionally update any dynamically added elements or notifications if needed
+        });
+        console.log("UI Language update complete for:", lang);
+        // Optionally update any dynamically added elements or notifications if needed
     }
+         
     
 
     // Show Welcome Notification
@@ -431,7 +507,7 @@ document.addEventListener('DOMContentLoaded', () => {
     window.copyMessage = copyMessage;
 
     // Process Simple Queries (Greetings, Farewells, Help, specific keywords)
-    const processSimpleQuery = (query) => {
+    const processQuery = (query) => {
         query = query.toLowerCase().trim();
 
         if (conversationPatterns.greetings.some(greeting => query.includes(greeting))) {
@@ -449,6 +525,20 @@ document.addEventListener('DOMContentLoaded', () => {
         // Check predefined answers (using the existing srmPredefinedAnswers object)
         const predefined = checkPredefinedAnswer(query, currentLanguage);
         if(predefined) return predefined;
+        if (query.toLowerCase().includes('health') || query.toLowerCase().includes('hospital')) {
+            return `SRM Hospital is a state-of-the-art medical facility within the university campus that provides:
+    - 24/7 emergency medical services
+    - Outpatient and inpatient care
+    - Advanced diagnostic facilities
+    - Specialized departments for various medical needs
+    - Well-equipped pharmacy
+    - Ambulance services
+    - Regular health check-up camps
+    - Modern operation theaters
+    - Qualified medical professionals and staff
+    
+    The hospital is equipped to handle both routine medical care and emergencies for students, faculty, and the local community.`;
+        }
 
         return null; // No simple response found
     };
@@ -509,6 +599,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!textElement) {
             console.error("Target text element not found for typing effect.");
             isResponseGenerating = false; // Reset flag
+            sendButton.textContent = "send"; // Reset button
+            sendButton.disabled = false;
             return;
         }
 
@@ -519,7 +611,13 @@ document.addEventListener('DOMContentLoaded', () => {
         let currentWordIndex = 0;
         textElement.innerHTML = ''; // Clear previous content (like "Bot is thinking...")
         messageDiv.classList.remove("loading"); // Remove loading class visually
-
+        // Clear any *previous* interval before starting a new one
+    // This handles rapid successive messages potentially cleaner
+    if (currentTypingInterval) {
+        console.warn("Clearing previous typing interval before starting new one.");
+        clearInterval(currentTypingInterval);
+        currentTypingInterval = null; // Ensure it's nullified
+   }
         // Set button to pause icon if response generation just started
         if (isResponseGenerating) {
              sendButton.textContent = "pause";
@@ -563,7 +661,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // Pause/Resume Typing Effect
-    const pauseResumeResponse = () => {
+    /*const pauseResumeResponse = () => {
         if (!isResponseGenerating || !currentTypingInterval) return; // Only act if typing
 
         if (isTypingPaused) {
@@ -574,10 +672,56 @@ document.addEventListener('DOMContentLoaded', () => {
             isTypingPaused = true;
             // Don't clear interval, just pause execution inside it
         }
-    };
+    };*/
 
     // --- Contextual Suggestions (Commented Out - Requires HTML/CSS) ---
-    /*
+    const intervalCallback = () => {
+        // If paused, simply do nothing this tick
+        if (isTypingPaused) {
+            // console.log("Typing paused..."); // Optional debug log
+            return;
+        }
+
+        if (currentWordIndex < words.length) {
+            textElement.innerHTML += words[currentWordIndex];
+            currentWordIndex++;
+            chatList.scrollTop = chatList.scrollHeight;
+        } else {
+            // --- Typing Finished ---
+            console.log("Typing finished. Cleaning up.");
+            // 1. Clear the interval decisively
+            if (currentTypingInterval) { // Check it exists before clearing
+                clearInterval(currentTypingInterval);
+                currentTypingInterval = null; // Nullify immediately
+            }
+
+            // 2. Reset state flags
+            isResponseGenerating = false;
+            isTypingPaused = false; // Ensure pause state is also reset
+            console.log("Reset state: isResponseGenerating=false, isTypingPaused=false");
+
+            // 3. Reset button appearance and enable it
+            messageDiv.classList.remove("loading");
+            sendButton.textContent = "send";
+            sendButton.disabled = false;
+            console.log("Reset button to 'send', disabled=false");
+
+            // 4. Show copy button, save history etc. (Keep this logic)
+            const copyButton = messageDiv.querySelector(".copy-button");
+            if (copyButton) {
+                copyButton.classList.remove("hide");
+            }
+            localStorage.setItem("savedChats", chatList.innerHTML);
+            // displayContextualSuggestions(messageDiv, userMessage); // Uncomment if using
+        }
+    };
+    // --- End Interval Function ---
+
+    // Start the new interval
+    currentTypingInterval = setInterval(intervalCallback, 1000 / TYPING_SPEED_FACTOR / 5);
+    console.log("Started new typing interval:", currentTypingInterval);
+
+    
     const generateContextualSuggestions = (query) => {
         // ... (Keep your logic here) ...
         const lowerQuery = query.toLowerCase();
@@ -623,165 +767,119 @@ document.addEventListener('DOMContentLoaded', () => {
             suggestionList.appendChild(listItem);
         });
     };
-    */
+    
     // --------------------------------------------------------------------
 
     // Generate Response (Simple or API)
-    const generateResponse = async (incomingMessageDiv) => {
+    const generateAPIResponse = async (incomingMessageDiv) => {
         const textElement = incomingMessageDiv.querySelector(".text");
-        const loadingIndicator = incomingMessageDiv.querySelector(".loading-indicator"); // Get loading indicator
 
-        if (!textElement) {
-             console.error("Cannot find text element in incoming message div:", incomingMessageDiv);
-             isResponseGenerating = false;
-             sendButton.textContent = 'send';
-             sendButton.disabled = false;
-             return;
-        }
         if (!userMessage) {
-            // Handle case where userMessage is somehow null
-            console.error("User message is null or empty.");
-            showTypingEffect("Sorry, I couldn't process your request.", textElement, incomingMessageDiv);
+            showTypingEffect("I'm sorry, I couldn't process your message. Please try again.", textElement, incomingMessageDiv);
             return;
         }
 
-        console.log(`Sending query to Flask: ${userMessage}, Language: ${currentLanguage}`); // Log outgoing query
+        const simpleResponse = processQuery(userMessage);
 
-        try {
-            // --- Only Call Flask Knowledge Base Endpoint ---
-            const flaskResponse = await fetch(`${FLASK_BASE_URL}/api/query-knowledge-base`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ query: userMessage, language: currentLanguage })
-            });
-
-            console.log("Flask Response Status:", flaskResponse.status); // Log status
-
-            if (!flaskResponse.ok) {
-                // Log detailed error if Flask response is not OK
-                let errorText = `Flask API request failed with status ${flaskResponse.status}`;
-                try {
-                    const errorData = await flaskResponse.json();
-                    console.error("Flask Error Response Body:", errorData);
-                    errorText += `: ${errorData.message || 'Unknown error'}`;
-                } catch (e) {
-                     // Handle cases where the error response isn't valid JSON
-                     const rawErrorText = await flaskResponse.text();
-                     console.error("Flask Non-JSON Error Response Body:", rawErrorText);
-                     errorText += ' - Non-JSON response received.';
-                }
-                throw new Error(errorText);
-            }
-
-            const data = await flaskResponse.json();
-            console.log("Received data from Flask:", data); // Log successful data
-
-            if (data && data.response) {
-                // Success! Show the response from Flask (which might be from KB or Gemini)
-                // Ensure loading indicator is hidden before typing starts
-                if (loadingIndicator) loadingIndicator.style.display = 'none';
-                showTypingEffect(data.response, textElement, incomingMessageDiv);
-                // Update conversation history
-                conversationHistory.push({ role: "model", content: data.response });
-                 if (conversationHistory.length > MAX_HISTORY_LENGTH * 2) conversationHistory.splice(0, 2);
-
-            } else {
-                // Handle cases where Flask returned success but no 'response' field
-                console.error("Flask response missing 'response' field:", data);
-                throw new Error("Received invalid data structure from backend.");
-            }
-            // --- End of Flask Call Logic ---
-
-        } catch (error) {
-            // Catch errors from the fetch call itself or from handling the response
-            console.error("Error generating response:", error);
-            const errorMessages = {
-                en: "Apologies, I couldn't fetch a response right now. Please check the connection or try again.",
-                ta: "மன்னிக்கவும், தற்போது பதிலைப் பெற முடியவில்லை. இணைப்பைச் சரிபார்க்கவும் அல்லது மீண்டும் முயற்சிக்கவும்.",
-                te: "క్షమించండి, ప్రస్తుతం ప్రతిస్పందనను పొందలేకపోయాము. దయచేసి కనెక్షన్‌ని తనిఖీ చేయండి లేదా మళ్లీ ప్రయత్నించండి.",
-                ml: "ക്ഷമിക്കണം, ഇപ്പോൾ ഒരു പ്രതികരണം നേടാൻ കഴിഞ്ഞില്ല. ദയവായി കണക്ഷൻ പരിശോധിക്കുക അല്ലെങ്കിൽ വീണ്ടും ശ്രമിക്കുക."
-            };
-             // Ensure loading indicator is hidden on error
-             if (loadingIndicator) loadingIndicator.style.display = 'none';
-            showTypingEffect(errorMessages[currentLanguage] || errorMessages.en, textElement, incomingMessageDiv);
-            if(textElement) textElement.classList.add("error"); // Add error class for styling
+        if (simpleResponse) {
+            showTypingEffect(simpleResponse, textElement, incomingMessageDiv);
+            return;
         }
-     // End of generateResponse function
 
-
-        // 3. Fallback to Gemini API
-        // Format conversation history for the API
-        const apiHistory = conversationHistory.map(turn => ({
-            role: turn.role === 'user' ? 'user' : 'model', // Ensure role names match API spec
-            parts: [{ text: turn.content }]
-        })).slice(-MAX_HISTORY_LENGTH * 2); // Send last N turns
-
-         // Construct the prompt carefully
-         const currentPrompt = `Considering the conversation history, answer the user's latest query about SRM University: "${userMessage}". Provide the answer in ${translations[currentLanguage]?.languageName || 'English'}. Focus on factual information relevant to SRM.`;
-
+        // Add language parameter to the API request
         const apiBody = {
-            contents: [
-                ...apiHistory, // Include formatted history
-                { // Add the current user query
-                    role: "user",
-                    parts: [{ text: currentPrompt }]
-                }
-            ],
-             // Add safety settings and generation config if needed
-             // generationConfig: { temperature: 0.7, maxOutputTokens: 500 },
-             // safetySettings: [ ... ]
+            contents: [{
+                role: "user",
+                parts: [{
+                    text: `As an SRM University assistant, provide information about: ${userMessage} in ${currentLanguage} language. 
+                          Include specific details and keep the response focused on official university information.`
+                }]
+            }]
         };
 
-
         try {
-            const response = await fetch(API_URL, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(apiBody)
-            });
+            // First try knowledge base
+            let useGemini = false;
+            try {
+                const kbResponse = await fetch(`${FLASK_BASE_URL}/api/query-knowledge-base`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        query: userMessage,
+                        language: currentLanguage
+                    })
+                });
 
-            if (!response.ok) {
-                 const errorData = await response.json();
-                 console.error("API Error Response:", errorData);
-                 throw new Error(`API request failed with status ${response.status}`);
-             }
+                if (kbResponse.ok) {
+                    const kbData = await kbResponse.json();
+                     if (kbData.response) {
+                         const formattedResponse = kbData.response.replace(/\n/g, '<br>');
+                         // Remove '#' and '*' from the response
+                        const cleanResponse = formattedResponse.replace(/[#*]/g, '');
+                         showTypingEffect(cleanResponse,formattedResponse, textElement, incomingMessageDiv);
+                         //showTypingEffect(kbData.response, textElement, incomingMessageDiv);
+                         return;
+                     }
 
-            const data = await response.json();
 
-            // Extract text response - Check candidate structure
-            let apiResponse = "Sorry, I couldn't generate a response."; // Default
-            if (data.candidates && data.candidates.length > 0 && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts.length > 0) {
-                apiResponse = data.candidates[0].content.parts[0].text.trim();
-            } else {
-                console.warn("Unexpected API response structure:", data);
+                 }
+                 useGemini = true;
+             }  catch (error) {
+                useGemini = true;
             }
 
-            showTypingEffect(apiResponse, textElement, incomingMessageDiv);
-             // Update history with Gemini's response
-             conversationHistory.push({ role: "model", content: apiResponse });
-             if (conversationHistory.length > MAX_HISTORY_LENGTH * 2) conversationHistory.splice(0, 2);
+            // Fall back to Gemini API if needed
+            if (useGemini) {
+                const response = await fetch(API_URL + `?key=${API_KEY}`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(apiBody)
+                });
 
+                if (!response.ok) throw new Error('API request failed');
+
+                const data = await response.json();
+                const apiResponse = data.candidates[0].content.parts[0].text.trim();
+                showTypingEffect(apiResponse, textElement, incomingMessageDiv);
+            }
         } catch (error) {
-            console.error("Error fetching from Gemini API:", error);
             const errorMessages = {
-                en: "Apologies, I'm encountering a technical issue. Please try again later.",
-                ta: "மன்னிக்கவும், தொழில்நுட்ப சிக்கல் ஏற்பட்டுள்ளது. பின்னர் மீண்டும் முயற்சிக்கவும்.",
-                te: "క్షమించండి, సాంకేతిక సమస్య ఎదురైంది. దయచేసి తర్వాత మళ్లీ ప్రయత్నించండి.",
-                ml: "ക്ഷമിക്കണം, ഒരു സാങ്കേതിക പ്രശ്നം നേരിടുന്നു. ദയവായി പിന്നീട് വീണ്ടും ശ്രമിക്കുക."
+                en: "I apologize, but I'm having trouble connecting. Please try again.",
+                ta: "மன்னிக்கவும், இணைப்பில் சிக்கல் உள்ளது. மீண்டும் முயற்சிக்கவும்.",
+                te: "క్షమించండి, కనెక్ట్ చేయడంలో సమస్య ఉంది. దయచేసి మళ్లీ ప్రయత్నించండి.",
+                ml: "ക്ഷമിക്കണം, കണക്റ്റ് ചെയ്യുന്നതിൽ പ്രശ്നമുണ്ട്. വീണ്ടും ശ്രമിക്കുക."
             };
-            showTypingEffect(errorMessages[currentLanguage] || errorMessages.en, textElement, incomingMessageDiv);
-            textElement.classList.add("error"); // Add error class for styling
+            showTypingEffect(errorMessages[currentLanguage], textElement, incomingMessageDiv);
+            textElement.classList.add("error");
         }
     };
 
-    // Handle Outgoing Chat Message
-    const handleOutgoingChat = () => {
-        userMessage = inputElement.value.trim(); // Get message from textarea
-        if (!userMessage || isResponseGenerating) return; // Do nothing if empty or already generating
 
-        isResponseGenerating = true; // Set flag
-        sendButton.disabled = true; // Disable send while processing initial step
-        sendButton.textContent = 'pause'; // Show pause icon immediately
+    // Handle Outgoing Chat Message
+    const handleOutgoingChat = (queryToSend = null) => {
+        const messageToSend = queryToSend ? queryToSend.trim() : inputElement.value.trim();
+    
+        // --- Log state *before* the check ---
+        console.log(`handleOutgoingChat called. messageToSend: "${messageToSend}", isResponseGenerating: ${isResponseGenerating}`);
+    
+        // Guard Clause
+        if (!messageToSend || isResponseGenerating) {
+            if (!messageToSend) console.log("handleOutgoingChat: Message is empty, returning.");
+            // This log is key: Does it trigger when it shouldn't?
+            if (isResponseGenerating) console.log("handleOutgoingChat: isResponseGenerating is TRUE, returning.");
+            return;
+        }
+    
+        console.log("handleOutgoingChat: Proceeding to send message."); // Should see this if the guard passes
+    
+        // *** Important: Set the global userMessage to the message we are actually sending ***
+        userMessage = messageToSend;
+    
+        // Set state for sending
+        isResponseGenerating = true;
+        sendButton.disabled = true; // Disable initially
+        sendButton.textContent = 'pause'; // Show pause icon
+        console.log("handleOutgoingChat: Set isResponseGenerating=true, button to 'pause', disabled=true");
 
 
         // 1. Create and display the user's message bubble
@@ -847,7 +945,7 @@ const showBotLoadingAndGenerate = () => {
 
 
     // Start generating the actual response
-    generateResponse(incomingMessageDiv);
+    generateAPIResponse(incomingMessageDiv);
 };
 
     // --- Suggestion Group Management (Using active class) ---
@@ -862,7 +960,28 @@ const showBotLoadingAndGenerate = () => {
         });
         updateSuggestionButtonVisibility(); // Update button states
     };
-
+    const pauseResumeResponse = () => {
+        // Add extra guard: only pause/resume if an interval is *actually* running
+        if (!isResponseGenerating || !currentTypingInterval) {
+            console.warn("pauseResumeResponse called but no active typing interval or not generating.");
+            // Optional: Force reset button state if somehow out of sync
+            if (!isResponseGenerating) {
+                sendButton.textContent = "send";
+                sendButton.disabled = false;
+            }
+            return;
+        }
+    
+        if (isTypingPaused) { // Currently Paused -> Resume
+            isTypingPaused = false;
+            sendButton.textContent = "pause";
+            console.log("Resuming typing. Set button to 'pause'. isTypingPaused=false");
+        } else { // Currently Typing -> Pause
+            isTypingPaused = true;
+            sendButton.textContent = "play_arrow";
+            console.log("Pausing typing. Set button to 'play_arrow'. isTypingPaused=true");
+        }
+    };
     const updateSuggestionButtonVisibility = () => {
         scrollUpButton.disabled = currentSuggestionGroup === 1;
         scrollDownButton.disabled = currentSuggestionGroup === suggestionContainers.length; // Disable if on last group
@@ -917,12 +1036,18 @@ const showBotLoadingAndGenerate = () => {
 
     // Send Button Click
     sendButton.addEventListener('click', (e) => {
-        e.preventDefault(); // Prevent form submission if button is clicked
+        
         if (sendButton.textContent === "pause" || sendButton.textContent === "play_arrow") {
+            e.preventDefault(); // Prevent form submission if button is clicked
             pauseResumeResponse();
         } else if (sendButton.textContent === "send") {
             handleOutgoingChat();
+        } else {
+            console.warn("Send button clicked with unexpected text:", sendButton.textContent);
         }
+
+
+        
     });
 
      // Textarea Input for Auto-Resize and Autocomplete
@@ -1004,7 +1129,7 @@ const showBotLoadingAndGenerate = () => {
     // ========================= Initialization =========================
     setActiveSuggestionGroup(1);
     console.log("Attempting to show welcome notification...");
-    updateUILanguage(languageSelect.value || 'en'); // Update based on initial dropdown value
+    //updateUILanguage(languageSelect.value || 'en'); // Update based on initial dropdown value
     //showGroup(1);
     //updateButtonVisibility();
     showWelcomeNotification();
