@@ -2,7 +2,7 @@
 
 document.addEventListener('DOMContentLoaded', () => {
     // === Constants ===
-    const FLASK_BASE_URL = 'http://localhost:5000'; // Replace if different
+    const FLASK_BASE_URL = 'http://localhost:8081'; // Replace if different
     const API_KEY = "AIzaSyDAK3gTEiJFynqHm7-jvrL-ePM_YoHHbpM";
     const API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
     const MAX_HISTORY_LENGTH = 5; // Number of conversation turns to remember
@@ -36,13 +36,30 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // === Event Listeners (Add this helper function) ===
     const stopCurrentTypingAndReset = () => {
-        console.log("stopCurrentTypingAndReset called.");
+        console.log("--- stopCurrentTypingAndReset: STARTED ---"); // Log entry
+    
+        // Log state BEFORE attempting changes
+        console.log(`stopCurrentTypingAndReset: Current isResponseGenerating = ${isResponseGenerating}`);
+        console.log(`stopCurrentTypingAndReset: Current interval ID = ${currentTypingInterval}`);
+    
         if (currentTypingInterval) {
-            console.log("Clearing active typing interval:", currentTypingInterval);
-            clearInterval(currentTypingInterval);
-            currentTypingInterval = null;
+            console.log(`stopCurrentTypingAndReset: Attempting to clear interval ID: ${currentTypingInterval}`);
+            try {
+                clearInterval(currentTypingInterval);
+                console.log(`stopCurrentTypingAndReset: Successfully called clearInterval.`);
+            } catch (error) {
+                console.error(`stopCurrentTypingAndReset: Error during clearInterval:`, error);
+            } finally {
+                 // ALWAYS nullify the interval variable after attempting to clear
+                 currentTypingInterval = null;
+                 console.log(`stopCurrentTypingAndReset: Set currentTypingInterval to null.`);
+            }
         } else {
-            console.log("No active typing interval to clear.");
+            console.warn("stopCurrentTypingAndReset: No active typing interval ID found to clear.");
+            // If there's no interval, maybe isResponseGenerating is still true? Force reset?
+            if (isResponseGenerating) {
+                console.warn("stopCurrentTypingAndReset: isResponseGenerating was true but no interval found. Forcing state reset anyway.");
+            }
         }
     
         // Find the last incoming message which might still be "loading"
@@ -54,20 +71,23 @@ document.addEventListener('DOMContentLoaded', () => {
             if (textElement && !textElement.textContent?.trim()) {
                  textElement.textContent = "[Response stopped]"; // Example placeholder
             }
-            console.log("Removed loading class from last message.");
+            console.log("stopCurrentTypingAndReset: Removed loading class from last message.");
+        } else {
+             console.log("stopCurrentTypingAndReset: Did not find a loading incoming message to update.");
         }
     
-        // Reset state flags
-        isResponseGenerating = false;
-        console.log("Reset state: isResponseGenerating=false");
+        // --- Reset state flags ---
+        isResponseGenerating = false; // Set the main flag to false
+        console.log(`stopCurrentTypingAndReset: Set isResponseGenerating = ${isResponseGenerating}`); // Verify it's false
     
-        // Reset button appearance and enable it
+        // --- Reset button appearance and enable it ---
         sendButton.textContent = "send";
         sendButton.disabled = false;
-        console.log("Reset button to 'send', disabled=false");
+        console.log(`stopCurrentTypingAndReset: Set button text to '${sendButton.textContent}', disabled = ${sendButton.disabled}`); // Verify changes
     
-        // Save chat history - potentially with the partially typed/stopped message
+        // Save chat history - state might have changed (e.g., partial message)
         localStorage.setItem("savedChats", chatList.innerHTML);
+        console.log("--- stopCurrentTypingAndReset: FINISHED ---"); // Log exit
     };
     
     // Helper function to handle suggestion clicks
@@ -596,68 +616,84 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Show Typing Effect
     const showTypingEffect = (text, textElement, messageDiv) => {
+        console.log("--- showTypingEffect: STARTED ---");
+    
+        // 1. --- Safety Check ---
         if (!textElement) {
-            console.error("Target text element not found for typing effect.");
-            isResponseGenerating = false; // Reset flag
-            sendButton.textContent = "send"; // Reset button
-            sendButton.disabled = false;
+            console.error("showTypingEffect: Target text element not found. Aborting and resetting state.");
+            stopCurrentTypingAndReset(); // Use the reset function on error
+            console.log("--- showTypingEffect: FINISHED (Error) ---");
             return;
         }
-
-        isTypingPaused = false;
-        const formattedText = formatBotResponse(text); // Format the final text
-        // Split into words for a more natural typing feel
+        console.log("showTypingEffect: textElement found.");
+    
+        // 2. --- Clear Previous Interval ---
+        // Essential to prevent multiple intervals running if messages come fast
+        if (currentTypingInterval) {
+            console.warn(`showTypingEffect: Clearing PREVIOUS interval ID: ${currentTypingInterval} before starting new one.`);
+            clearInterval(currentTypingInterval);
+            currentTypingInterval = null; // Nullify immediately
+        } else {
+            console.log("showTypingEffect: No previous interval found to clear.");
+        }
+    
+        // 3. --- Prepare Text and UI ---
+        const formattedText = formatBotResponse(text);
         const words = formattedText.split(/(\s+)/); // Split by space, keeping spaces
         let currentWordIndex = 0;
         textElement.innerHTML = ''; // Clear previous content (like "Bot is thinking...")
-        messageDiv.classList.remove("loading"); // Remove loading class visually
-        // Clear any *previous* interval before starting a new one
-    // This handles rapid successive messages potentially cleaner
-    if (currentTypingInterval) {
-        console.warn("Clearing previous typing interval before starting new one.");
-        clearInterval(currentTypingInterval);
-        currentTypingInterval = null; // Ensure it's nullified
-   }
-        // Set button to pause icon if response generation just started
-        if (isResponseGenerating) {
-             sendButton.textContent = "pause";
-             sendButton.disabled = false; // Ensure button is enabled
-        }
-
-        clearInterval(currentTypingInterval); // Clear any previous interval
-
-        currentTypingInterval = setInterval(() => {
-            if (isTypingPaused) return; // Skip if paused
-
+        messageDiv.classList.remove("loading"); // Ensure loading class removed visually
+        console.log("showTypingEffect: Text prepared, UI cleared.");
+    
+        // 4. --- Set Button State (to Stop) ---
+        // Visually uses 'pause' icon, but functionally means 'stop'
+        sendButton.textContent = "pause";
+        sendButton.disabled = false; // MUST be enabled so user can click 'stop'
+        console.log(`showTypingEffect: Set button text to '${sendButton.textContent}' (stop), disabled = ${sendButton.disabled}`);
+    
+        // 5. --- Define the Interval Callback ---
+        const intervalCallback = () => {
+            // Check if interval was stopped externally (e.g., by stopCurrentTypingAndReset)
+            // If currentTypingInterval became null, this specific interval instance should stop.
+            // Note: This check is a defensive measure; the clearInterval in stopCurrentTypingAndReset
+            // is the primary mechanism for stopping.
+            if (!currentTypingInterval) {
+                 console.warn("intervalCallback: Interval seems to have been cleared externally. Stopping callback execution.");
+                 // We don't clear again here, just stop executing this instance.
+                 return;
+            }
+    
+    
             if (currentWordIndex < words.length) {
                 // Append word/space
                 textElement.innerHTML += words[currentWordIndex];
                 currentWordIndex++;
-                chatList.scrollTop = chatList.scrollHeight; // Scroll to bottom
+                // Scroll to bottom
+                chatList.scrollTop = chatList.scrollHeight;
             } else {
-                // Typing finished
-                clearInterval(currentTypingInterval);
-                currentTypingInterval = null;
-                isResponseGenerating = false;
-                messageDiv.classList.remove("loading"); // Ensure loading class is removed
-
-                // Restore send button to 'send' icon
-                sendButton.textContent = "send";
-                 sendButton.disabled = false; // Ensure button is enabled
-
-                // Show copy button if it exists
-                const copyButton = messageDiv.querySelector(".copy-button"); // Use the class selector
+                // --- Typing Finished Naturally ---
+                console.log(`showTypingEffect intervalCallback: Typing finished NATURALLY. Interval ID was: ${currentTypingInterval}`);
+                // Use the central reset function for cleanup
+                // This will clear the interval, reset flags, and reset the button.
+                stopCurrentTypingAndReset();
+    
+                // Perform actions *specific* to natural completion AFTER resetting state
+                const copyButton = messageDiv.querySelector(".copy-button");
                 if (copyButton) {
-                copyButton.classList.remove("hide");}
-
-                // Save chat history
-                localStorage.setItem("savedChats", chatList.innerHTML);
-
-                 // --- Contextual Suggestions (Currently Commented Out) ---
-                // displayContextualSuggestions(messageDiv, userMessage); // Pass original user message
-                // ---------------------------------------------------------
+                    copyButton.classList.remove("hide");
+                    console.log("showTypingEffect intervalCallback: Copy button shown.");
+                }
+                // Note: History saving is handled within stopCurrentTypingAndReset
             }
-        }, 1000 / TYPING_SPEED_FACTOR / 5); // Adjust timing (e.g., / 5 for word speed)
+        }; // --- End of intervalCallback definition ---
+        currentTypingInterval = setInterval(intervalCallback, 1000 / TYPING_SPEED_FACTOR / 5);
+        console.log("Started new typing interval:", currentTypingInterval);
+    
+        // 6. --- Start the New Interval ---
+        const intervalSpeed = 1000 / TYPING_SPEED_FACTOR / 5; // Adjust timing as needed
+        currentTypingInterval = setInterval(intervalCallback, intervalSpeed);
+        console.log(`showTypingEffect: Started NEW typing interval ID: ${currentTypingInterval} with speed ${intervalSpeed}ms.`);
+        console.log("--- showTypingEffect: FINISHED (Setup Complete) ---");
     };
 
     // Pause/Resume Typing Effect
@@ -675,51 +711,11 @@ document.addEventListener('DOMContentLoaded', () => {
     };*/
 
     // --- Contextual Suggestions (Commented Out - Requires HTML/CSS) ---
-    const intervalCallback = () => {
-        // If paused, simply do nothing this tick
-        if (isTypingPaused) {
-            // console.log("Typing paused..."); // Optional debug log
-            return;
-        }
-
-        if (currentWordIndex < words.length) {
-            textElement.innerHTML += words[currentWordIndex];
-            currentWordIndex++;
-            chatList.scrollTop = chatList.scrollHeight;
-        } else {
-            // --- Typing Finished ---
-            console.log("Typing finished. Cleaning up.");
-            // 1. Clear the interval decisively
-            if (currentTypingInterval) { // Check it exists before clearing
-                clearInterval(currentTypingInterval);
-                currentTypingInterval = null; // Nullify immediately
-            }
-
-            // 2. Reset state flags
-            isResponseGenerating = false;
-            isTypingPaused = false; // Ensure pause state is also reset
-            console.log("Reset state: isResponseGenerating=false, isTypingPaused=false");
-
-            // 3. Reset button appearance and enable it
-            messageDiv.classList.remove("loading");
-            sendButton.textContent = "send";
-            sendButton.disabled = false;
-            console.log("Reset button to 'send', disabled=false");
-
-            // 4. Show copy button, save history etc. (Keep this logic)
-            const copyButton = messageDiv.querySelector(".copy-button");
-            if (copyButton) {
-                copyButton.classList.remove("hide");
-            }
-            localStorage.setItem("savedChats", chatList.innerHTML);
-            // displayContextualSuggestions(messageDiv, userMessage); // Uncomment if using
-        }
-    };
+    
     // --- End Interval Function ---
 
     // Start the new interval
-    currentTypingInterval = setInterval(intervalCallback, 1000 / TYPING_SPEED_FACTOR / 5);
-    console.log("Started new typing interval:", currentTypingInterval);
+    
 
     
     const generateContextualSuggestions = (query) => {
@@ -774,84 +770,178 @@ document.addEventListener('DOMContentLoaded', () => {
     const generateAPIResponse = async (incomingMessageDiv) => {
         const textElement = incomingMessageDiv.querySelector(".text");
 
+        // --- DEBUG START ---
+        console.log("--- generateAPIResponse: STARTED ---");
+        console.log(`generateAPIResponse: User message = "${userMessage}"`);
+        console.log(`generateAPIResponse: Current language = "${currentLanguage}"`);
+        // --- DEBUG END ---
+
         if (!userMessage) {
+            console.error("generateAPIResponse: userMessage is null or empty!"); // DEBUG
             showTypingEffect("I'm sorry, I couldn't process your message. Please try again.", textElement, incomingMessageDiv);
+            stopCurrentTypingAndReset(); // Reset state on error
             return;
         }
+        if (!textElement) {
+             console.error("generateAPIResponse: textElement not found in incoming message div!"); // DEBUG
+             stopCurrentTypingAndReset(); // Reset state on error
+             return;
+        }
+
 
         const simpleResponse = processQuery(userMessage);
+        console.log("generateAPIResponse: Simple response check result:", simpleResponse); // DEBUG
 
         if (simpleResponse) {
+            console.log("generateAPIResponse: Using simple response."); // DEBUG
             showTypingEffect(simpleResponse, textElement, incomingMessageDiv);
+            // Note: stopCurrentTypingAndReset is called inside showTypingEffect when done/stopped
             return;
         }
 
-        // Add language parameter to the API request
-        const apiBody = {
-            contents: [{
-                role: "user",
-                parts: [{
-                    text: `As an SRM University assistant, provide information about: ${userMessage} in ${currentLanguage} language. 
-                          Include specific details and keep the response focused on official university information.`
-                }]
-            }]
-        };
-
+        // --- Attempt Knowledge Base (Flask) ---
+        let useGemini = false;
+        let kbResponseText = null;
+        console.log("generateAPIResponse: Attempting Flask KB request..."); // DEBUG
         try {
-            // First try knowledge base
-            let useGemini = false;
-            try {
-                const kbResponse = await fetch(`${FLASK_BASE_URL}/api/query-knowledge-base`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        query: userMessage,
-                        language: currentLanguage
-                    })
-                });
+            const kbFetchStart = Date.now(); // DEBUG Time
+            const kbResponse = await fetch(`${FLASK_BASE_URL}/api/query-knowledge-base`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    query: userMessage,
+                    language: currentLanguage
+                })
+            });
+            const kbFetchEnd = Date.now(); // DEBUG Time
+            console.log(`generateAPIResponse: Flask KB response status: ${kbResponse.status} (took ${kbFetchEnd - kbFetchStart}ms)`); // DEBUG
 
-                if (kbResponse.ok) {
-                    const kbData = await kbResponse.json();
-                     if (kbData.response) {
-                         const formattedResponse = kbData.response.replace(/\n/g, '<br>');
-                         // Remove '#' and '*' from the response
-                        const cleanResponse = formattedResponse.replace(/[#*]/g, '');
-                         showTypingEffect(cleanResponse,formattedResponse, textElement, incomingMessageDiv);
-                         //showTypingEffect(kbData.response, textElement, incomingMessageDiv);
-                         return;
-                     }
-
-
-                 }
-                 useGemini = true;
-             }  catch (error) {
-                useGemini = true;
+            if (kbResponse.ok) {
+                const kbData = await kbResponse.json();
+                console.log("generateAPIResponse: Flask KB response data:", kbData); // DEBUG
+                if (kbData && kbData.response && typeof kbData.response === 'string' && kbData.response.trim()) {
+                    // Clean up potential formatting issues from Python side before showing
+                    kbResponseText = kbData.response
+                                           .replace(/\\n/g, '\n') // Fix escaped newlines if any
+                                           .replace(/[#*]/g, '') // Remove markdown chars
+                                           .trim();
+                    console.log("generateAPIResponse: Using valid response from Flask KB:", kbResponseText); // DEBUG
+                    // Don't set useGemini = false here, let the flow continue
+                } else {
+                    console.log("generateAPIResponse: Flask KB response OK, but no valid 'response' field found. Will try Gemini."); // DEBUG
+                    useGemini = true;
+                }
+            } else {
+                console.error(`generateAPIResponse: Flask KB request failed with status ${kbResponse.status}. Will try Gemini.`); // DEBUG
+                useGemini = true; // Try Gemini if Flask fails
             }
+        } catch (error) {
+            console.error("generateAPIResponse: Error during Flask KB fetch:", error); // DEBUG
+            useGemini = true; // Try Gemini if fetch itself fails
+        }
 
-            // Fall back to Gemini API if needed
-            if (useGemini) {
+        // --- Use Flask KB Response if Available ---
+        if (kbResponseText) {
+            console.log("generateAPIResponse: Calling showTypingEffect with Flask KB response."); // DEBUG
+            showTypingEffect(kbResponseText, textElement, incomingMessageDiv);
+            // Note: stopCurrentTypingAndReset is called inside showTypingEffect when done/stopped
+            return; // IMPORTANT: Exit here if KB response was used
+        }
+
+
+        // --- Fall back to Gemini API if needed ---
+        if (useGemini) {
+            console.log("generateAPIResponse: Attempting Gemini API request..."); // DEBUG
+            // Add language parameter to the API request (Adjust prompt as needed)
+            const apiBody = {
+                contents: [{
+                    role: "user",
+                    parts: [{
+                        // Ensure prompt clearly asks for the specific language
+                        text: `You are SRM InfoBot. Provide information about the following query regarding SRM University, strictly in the ${translations[currentLanguage]?.welcome ? currentLanguage : 'en'} language: "${userMessage}"`
+                    }]
+                }],
+                // Add safety settings if desired
+                // safetySettings: [ { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_MEDIUM_AND_ABOVE" } ],
+                generationConfig: {
+                    // Configure temperature, etc. if needed
+                    // temperature: 0.7
+                }
+            };
+            console.log("generateAPIResponse: Gemini API request body:", JSON.stringify(apiBody).substring(0, 200) + "..."); // DEBUG log truncated body
+
+
+            try {
+                const geminiFetchStart = Date.now(); // DEBUG Time
                 const response = await fetch(API_URL + `?key=${API_KEY}`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify(apiBody)
                 });
+                const geminiFetchEnd = Date.now(); // DEBUG Time
+                console.log(`generateAPIResponse: Gemini API response status: ${response.status} (took ${geminiFetchEnd - geminiFetchStart}ms)`); // DEBUG
 
-                if (!response.ok) throw new Error('API request failed');
+                if (!response.ok) {
+                     // Try to get more error details from Gemini response if possible
+                     let errorDetail = `API request failed with status ${response.status}`;
+                     try {
+                         const errorData = await response.json();
+                         console.error("generateAPIResponse: Gemini API error response data:", errorData); // DEBUG
+                         errorDetail += `: ${errorData?.error?.message || JSON.stringify(errorData)}`;
+                     } catch (parseError) {
+                         // Ignore if response body isn't valid JSON
+                     }
+                     throw new Error(errorDetail);
+                 }
+
 
                 const data = await response.json();
-                const apiResponse = data.candidates[0].content.parts[0].text.trim();
+                console.log("generateAPIResponse: Gemini API response data:", data); // DEBUG
+
+                // --- Safely extract text ---
+                let apiResponse = null;
+                if (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0] && data.candidates[0].content.parts[0].text) {
+                    apiResponse = data.candidates[0].content.parts[0].text.trim();
+                    console.log("generateAPIResponse: Extracted Gemini text:", apiResponse); // DEBUG
+                } else if (data.candidates && data.candidates[0] && data.candidates[0].finishReason) {
+                     // Handle cases where generation finished due to safety or other reasons without text
+                     apiResponse = `[Response generation stopped by API: ${data.candidates[0].finishReason}]`;
+                     console.warn("generateAPIResponse: Gemini generation finished without text. Reason:", data.candidates[0].finishReason); // DEBUG
+                 } else {
+                     // Handle unexpected response structure
+                     console.error("generateAPIResponse: Could not extract text from Gemini response structure.", data); // DEBUG
+                     apiResponse = "[Error processing API response]";
+                 }
+
+                console.log("generateAPIResponse: Calling showTypingEffect with Gemini response."); // DEBUG
                 showTypingEffect(apiResponse, textElement, incomingMessageDiv);
+                // Note: stopCurrentTypingAndReset is called inside showTypingEffect when done/stopped
+            } catch (error) {
+                console.error("generateAPIResponse: Error during Gemini API fetch or processing:", error); // DEBUG
+                const errorMessages = { // Provide error messages in different languages
+                    en: "I apologize, but I encountered an issue generating a response. Please check the details or try again later.",
+                    ta: "மன்னிக்கவும், பதிலளிப்பதில் சிக்கல் ஏற்பட்டது. விவரங்களைச் சரிபார்க்கவும் அல்லது பின்னர் மீண்டும் முயற்சிக்கவும்.",
+                    te: "క్షమించండి, ప్రతిస్పందనను రూపొందించడంలో సమస్య ఎదురైంది. దయచేసి వివరాలను తనిఖీ చేయండి లేదా తర్వాత మళ్లీ ప్రయత్నించండి.",
+                    ml: "ക്ഷമിക്കണം, ഒരു പ്രതികരണം സൃഷ്ടിക്കുന്നതിൽ ഒരു പ്രശ്നം നേരിട്ടു. ദയവായി വിശദാംശങ്ങൾ പരിശോധിക്കുക അല്ലെങ്കിൽ പിന്നീട് വീണ്ടും ശ്രമിക്കുക.",
+                    hi: "क्षमा करें, प्रतिक्रिया उत्पन्न करने में कोई समस्या आई। कृपया विवरण जांचें या बाद में पुनः प्रयास करें।"
+                };
+                const displayError = `${errorMessages[currentLanguage] || errorMessages.en}\n(Error: ${error.message})`; // Add technical details
+                showTypingEffect(displayError, textElement, incomingMessageDiv);
+                if (textElement) textElement.classList.add("error"); // Style as error
+                 // Note: stopCurrentTypingAndReset is called inside showTypingEffect when done/stopped
+                 // We might want to call it explicitly here too if showTypingEffect failed immediately
+                 // stopCurrentTypingAndReset(); // Consider if needed
             }
-        } catch (error) {
-            const errorMessages = {
-                en: "I apologize, but I'm having trouble connecting. Please try again.",
-                ta: "மன்னிக்கவும், இணைப்பில் சிக்கல் உள்ளது. மீண்டும் முயற்சிக்கவும்.",
-                te: "క్షమించండి, కనెక్ట్ చేయడంలో సమస్య ఉంది. దయచేసి మళ్లీ ప్రయత్నించండి.",
-                ml: "ക്ഷമിക്കണം, കണക്റ്റ് ചെയ്യുന്നതിൽ പ്രശ്നമുണ്ട്. വീണ്ടും ശ്രമിക്കുക."
-            };
-            showTypingEffect(errorMessages[currentLanguage], textElement, incomingMessageDiv);
-            textElement.classList.add("error");
+        } else if (!kbResponseText) {
+             // This case should ideally not be reached if logic is correct,
+             // but acts as a failsafe if neither KB nor Gemini was attempted/successful.
+             console.error("generateAPIResponse: Reached end without valid KB response and useGemini is false."); // DEBUG
+             const fallbackErrorMsg = "Sorry, I couldn't retrieve information at this time.";
+             showTypingEffect(fallbackErrorMsg, textElement, incomingMessageDiv);
+             if (textElement) textElement.classList.add("error");
+             stopCurrentTypingAndReset(); // Ensure reset
         }
+        console.log("--- generateAPIResponse: FINISHED ---"); // DEBUG
     };
 
 
@@ -960,7 +1050,7 @@ const showBotLoadingAndGenerate = () => {
         });
         updateSuggestionButtonVisibility(); // Update button states
     };
-    const pauseResumeResponse = () => {
+    /*const pauseResumeResponse = () => {
         // Add extra guard: only pause/resume if an interval is *actually* running
         if (!isResponseGenerating || !currentTypingInterval) {
             console.warn("pauseResumeResponse called but no active typing interval or not generating.");
@@ -981,7 +1071,7 @@ const showBotLoadingAndGenerate = () => {
             sendButton.textContent = "play_arrow";
             console.log("Pausing typing. Set button to 'play_arrow'. isTypingPaused=true");
         }
-    };
+    };*/
     const updateSuggestionButtonVisibility = () => {
         scrollUpButton.disabled = currentSuggestionGroup === 1;
         scrollDownButton.disabled = currentSuggestionGroup === suggestionContainers.length; // Disable if on last group
@@ -1036,19 +1126,54 @@ const showBotLoadingAndGenerate = () => {
 
     // Send Button Click
     sendButton.addEventListener('click', (e) => {
-        
-        if (sendButton.textContent === "pause" || sendButton.textContent === "play_arrow") {
-            e.preventDefault(); // Prevent form submission if button is clicked
-            pauseResumeResponse();
-        } else if (sendButton.textContent === "send") {
-            handleOutgoingChat();
+        e.preventDefault(); 
+        const currentButtonState = sendButton.textContent;
+        console.log("Send button clicked. Current state:", currentButtonState);
+        if (currentButtonState === "pause") { // Functionally means "Stop"
+            console.log("Button is 'pause' (stop). Stopping current response...");
+            stopCurrentTypingAndReset();
+            if (inputElement.value.trim()) {
+                console.log("Input has text after stopping. Triggering handleOutgoingChat for new message.");
+                // Use a small timeout to ensure state resets fully before starting new send
+                setTimeout(() => handleOutgoingChat(), 50);
+           } else {
+                console.log("Input is empty after stopping. Waiting for user input.");
+           }
+        } else if (currentButtonState === "send") {
+            console.log("Button is 'send'. Handling outgoing chat...");
+            handleOutgoingChat(); // Standard send behavior
+    
+        } else if (currentButtonState === "play_arrow") {
+            // This state should no longer exist, but handle defensively
+            console.warn("Button clicked in unexpected 'play_arrow' state. Resetting.");
+            stopCurrentTypingAndReset(); // Reset if in this invalid state
+    
         } else {
-            console.warn("Send button clicked with unexpected text:", sendButton.textContent);
+            console.warn("Send button clicked with unexpected text:", currentButtonState);
+            stopCurrentTypingAndReset(); // Reset if state is unknown
         }
+    });
+    typingForm.addEventListener("submit", (e) => {
+        e.preventDefault();
+        console.log("Form submitted (Enter key).");
+        // If a response is generating, Enter key should arguably *stop* it first.
+        if (isResponseGenerating) {
+            console.log("Enter key pressed while generating. Stopping current response.");
+            stopCurrentTypingAndReset();
+             // Decide if Enter should *also* send the new message immediately after stopping
+             // if (inputElement.value.trim()) {
+             //    setTimeout(() => handleOutgoingChat(), 50);
+             // }
+        } else {
+            // Only send if not currently generating
+            handleOutgoingChat();
+        }
+    });
+        
 
 
         
-    });
+    
 
      // Textarea Input for Auto-Resize and Autocomplete
      inputElement.addEventListener("input", () => {

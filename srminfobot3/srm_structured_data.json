@@ -1,0 +1,366 @@
+{
+    "programs_ug": {
+        "Aerospace Engineering": [
+            "b.tech. aerospace engineering duration : 4 years | annual fees : ₹ 4,00,000 | intake : 120"
+        ],
+        "Automobile Engineering": [
+            "b.tech. automobile engineering duration : 4 years | annual fees : ₹ 2,75,000 | intake : 60",
+            "b.tech. automobile engineering with specialization in vehicles testing (garc) duration : 4 years | annual fees : ₹ 2,75,000 | intake : 30",
+            "b.tech. automobile engineering with specialization in automotive electronics duration : 4 years | annual fees : ₹ 2,75,000 | intake : 30",
+            "b.tech. automotive engineering (arai) duration : 4 | annual fees : ₹ 2,88,500 | intake : 30"
+        ],
+        "Biomedical Engineering": [
+            "b.tech. biomedical engineering duration : 4 years | annual fees : ₹ 2,75,000 | intake : 90",
+            "b.tech. biomedical engineering with specialization in machine intelligence duration : 4 years | annual fees : ₹ 2,75,000 | intake : 30"
+        ],
+        "Biotechnology": [
+            "b.tech. biotechnology duration : 4 years | annual fees : ₹ 2,75,000 | intake : 300",
+            "b.tech. biotechnology with specialization in food technology duration : 4 years | annual fees : ₹ 2,75,000 | intake : 30",
+            "b.tech. biotechnology with specialization in regenerative medicine duration : 4 years | annual fees : ₹ 2,75,000 | intake : 30"
+        ],
+        "Chemical Engineering": [
+            "b.tech. chemical engineering duration : 4 years | annual fees : ₹ 2,75,000 | intake : 60"
+        ],
+        "Civil Engineering": [
+            "b.tech. civil engineering duration : 4 years | annual fees : ₹ 2,75,000 | intake : 90",
+            "b.tech. civil engineering with computer applications duration : 4 years | annual fees : ₹ 2,75,000 | intake : 30"
+        ],
+        "Computational Intelligence": [
+            "b.tech. artificial intelligence duration : 4 years | annual fees : ₹ 4,75,000 | intake : 180",
+            "b.tech. computer science and engineering with specialization in artificial intelligence and machine learning duration : 4 years | annual fees : ₹ 4,75,000 | intake : 420",
+            "b.tech. computer science and engineering with specialization in software engineering duration : 4 years | annual fees : ₹ 4,25,000 | intake : 180"
+        ],
+        "Computing Technologies": [
+            "b.tech. computer science and engineering duration : 4 years | annual fees : ₹ 4,75,000 | intake : 1140"
+        ],
+        "Data Science And Business Systems": [
+            "b.tech. computer science and business systems (in collaboration with tcs) duration : 4 years | annual fees : ₹ 4,25,000 | intake : 60",
+            "b.tech. computer science and engineering (data science) duration : 4 years | annual fees : ₹ 4,75,000 | intake : 120",
+            "b.tech. computer science and engineering with specialization in big data analytics duration : 4 years | annual fees : ₹ 4,25,000 | intake : 180",
+            "b.tech. computer science and engineering with specialization in blockchain technology duration : 4 years | annual fees : ₹ 4,25,000 | intake : 60",
+            "b.tech. computer science and engineering with specialization in gaming technology duration : 4 years | annual fees : ₹ 4,25,000 | intake : 60"
+        ],
+        "Electrical and Electronics Engineering": [
+            "b.tech. electrical & electronics engineering duration : 4 years | annual fees : ₹ 2,75,000 | intake : 240",
+            "b.tech. electrical vehicle technology duration : 4 years | annual fees : ₹ 2,75,000 | intake : 30"
+        ],
+        "Electronics & Communication": [
+            "b.tech. electronics & communication engineering duration : 4 years | annual fees : ₹ 2,75,000 | intake : 480",
+            "b.tech. electronics and communication engineering with specialization in cyber physical systems duration : 4 years | annual fees : ₹ 2,75,000 | intake : 30",
+            "b.tech. electronics and communication engineering with specialization in data sciences duration : 4 years | annual fees : ₹ 2,75,000 | intake : 60",
+            "b.tech. electronics and computer engineering duration : 4 years | annual fees : ₹ 2,75,000 | intake : 60",
+            "b.tech. electronics engineering (vlsi design and technology) duration : 4 years | annual fees : ₹ 2,75,000 | intake : 30"
+        ],
+        "Electronics & Instrumentation Engineering": [
+            "b.tech. automation & robotics duration : 4 years | annual fees : ₹ 2,75,000 | intake : 30",
+            "b.tech. electronics and instrumentation engineering duration : 4 years | annual fees : ₹ 2,75,000 | intake : 30"
+        ],
+        "Genetic Engineering": [
+            "b.tech. biotechnology (computational biology) duration : 4 | annual fees : ₹ 2,75,000 | intake : 30",
+            "b.tech. biotechnology with specialization in genetic engineering duration : 4 | annual fees : ₹ 2,75,000 | intake : 90"
+        ],
+        "Mechanical Engineering": [
+            "b.tech. mechanical engineering duration : 4 years | annual fees : ₹ 2,75,000 | intake : 240",
+            "b.tech. mechanical engineering (automation and robotics) duration : 4 years | annual fees : ₹ 2,75,000 | intake : 30",
+            "b.tech. mechanical engineering with specialization in artificial intelligence and machine learning duration : 4 years | annual fees : ₹ 2,75,000 | intake : 60"
+        ],
+        "Mechatronics Engineering": [
+            "b.tech. mechatronics engineering duration : 4 years | annual fees : ₹ 2,75,000 | intake : 60",
+            "b.tech. mechatronics engineering (autonomous driving technology) duration : 4 years | annual fees : ₹ 2,75,000 | intake : 30",
+            "b.tech. mechatronics engineering (immersive technologies) duration : 4 years | annual fees : ₹ 2,75,000 | intake : 30",
+            "b.tech. mechatronics engineering (industrial iot and systems engineering) duration : 4 years | annual fees : ₹ 2,75,000 | intake : 30",
+            "b.tech. mechatronics engineering with specialization in robotics duration : 4 years | annual fees : ₹ 2,75,000 | intake : 60"
+        ],
+        "Networking And Communications": [
+            "b.tech – computer science and engineering (devsecops) duration : 4 years | annual fees : ₹ 4,25,000 | intake : 60",
+            "b.tech. computer science and engineering with specialization in cloud computing duration : 4 years | annual fees : ₹ 4,25,000 | intake : 180",
+            "b.tech. computer science and engineering with specialization in computer networking duration : 4 years | annual fees : ₹ 4,25,000 | intake : 60",
+            "b.tech. computer science and engineering with specialization in cyber security duration : 4 years | annual fees : ₹ 4,25,000 | intake : 300",
+            "b.tech. computer science and engineering with specialization in information technology duration : 4 years | annual fees : ₹ 4,25,000 | intake : 120",
+            "b.tech. computer science and engineering with specialization in internet of things duration : 4 years | annual fees : ₹ 4,25,000 | intake : 60"
+        ],
+        "Physics and Nanotechnology": [
+            "b.tech. nanotechnology duration : 4 years | annual fees : ₹ 4,00,000 | intake : 30"
+        ]
+    },
+    "programs_pg": {
+        "Aerospace Engineering": [
+            "m.tech. aerospace engineering duration : 2 years | annual fees : ₹ 160000 | intake : 18"
+        ],
+        "Automobile Engineering": [
+            "m.tech. automotive hybrid systems engineering duration : 2 years | annual fees : ₹ 1,60,000 | intake : 6",
+            "m.tech. automotive technology (arai) duration : 2 years | annual fees : ₹ 1,74,400 | intake : 18",
+            "m.tech. electric vehicle technology duration : 2 years | annual fees : ₹ 1,60,000 | intake : 18"
+        ],
+        "Biomedical Engineering": [
+            "m.tech. biomedical engineering duration : 2 years | annual fees : ₹ 1,60,000 | intake : 24"
+        ],
+        "Biotechnology": [
+            "m.tech. bio technology duration : 2 years | annual fees : ₹ 1,60,000 | intake : 30"
+        ],
+        "Chemical Engineering": [
+            "m.tech. chemical engineering duration : 2 years | annual fees : ₹ 1,60,000 | intake : 12"
+        ],
+        "Civil Engineering": [
+            "m.tech. construction engineering & management duration : 2 years | annual fees : ₹ 1,60,000 | intake : 45",
+            "m.tech. environmental engineering duration : 2 years | annual fees : ₹ 1,60,000 | intake : 12",
+            "m.tech. geotechnical engineering duration : 2 years | annual fees : ₹ 1,60,000 | intake : 12",
+            "m.tech. remote sensing & geographic information system duration : 2 years | annual fees : ₹ 1,60,000 | intake : 12",
+            "m.tech. structural engineering duration : 2 years | annual fees : ₹ 1,60,000 | intake : 45"
+        ],
+        "Electrical and Electronics Engineering": [
+            "m.tech. power electronics and drives duration : 2 years | annual fees : ₹ 1,60,000 | intake : 12",
+            "m.tech. power systems duration : 2 years | annual fees : ₹ 1,60,000 | intake : 12"
+        ],
+        "Electronics & Communication": [
+            "m.tech. embedded system technology duration : 2 years | annual fees : ₹ 1,60,000 | intake : 12",
+            "m.tech. vlsi design duration : 2 years | annual fees : ₹ 1,60,000 | intake : 12",
+            "m.tech. wireless communication technology duration : 2 years | annual fees : ₹ 1,60,000 | intake : 12"
+        ],
+        "Electronics & Instrumentation Engineering": [
+            "m.tech. automation and robotics (industry supported program) duration : 2 year | annual fees : ₹ 1,60,000 | intake : 12",
+            "m.tech. electronics and control engineering duration : 2 year | annual fees : ₹ 1,60,000 | intake : 12"
+        ],
+        "Genetic Engineering": [
+            "m.tech. genetic engineering duration : 2 years | annual fees : ₹ 1,60,000 | intake : 30"
+        ],
+        "Mechanical Engineering": [
+            "m.tech. computer aided design duration : 2 years | annual fees : ₹ 1,60,000 | intake : 12",
+            "m.tech. robotics duration : 2 years | annual fees : ₹ 1,60,000 | intake : 12",
+            "m.tech. solar energy duration : 2 years | annual fees : ₹ 1,60,000 | intake : 12",
+            "m.tech. thermal engineering with specialization in renewable energy/electronics cooling/gas dynamics/computational fluid dynamics duration : 2 years | annual fees : ₹ 1,60,000 | intake : 12"
+        ],
+        "Mechatronics Engineering": [
+            "m.tech. mechatronics engineering duration : 2 years | annual fees : ₹ 1,60,000 | intake : 12"
+        ],
+        "Networking And Communications": [
+            "m.tech. cloud computing duration : 2 years | annual fees : ₹ 1,60,000 | intake : 24",
+            "m.tech. cloud computing and block chain (in collaboration with great learning) duration : 3 | annual fees : ₹ 5,00,000 (for the entire programme) | intake : 30",
+            "m.tech. cyber security(in collaboration with great learning) duration : 3 years | annual fees : ₹ 5,00,000 (for the entire programme) | intake : 30",
+            "m.tech. information security and cyber forensics duration : 2 years | annual fees : ₹ 1,60,000 | intake : 18",
+            "m.tech. internet of things duration : 2 years | annual fees : ₹ 1,60,000 | intake : 12"
+        ],
+        "Physics and Nanotechnology": [
+            "m.tech. nanotechnology duration : 2 years | annual fees : ₹ 1,60,000 | intake : 6"
+        ],
+        "Computational Intelligence": [
+            "m.tech. artificial intelligence & data science(in collaboration with great learning) duration : 3 years | annual fees : ₹ 5,00,000 (for the entire programme) | intake : 120",
+            "m.tech. artificial intelligence(in collaboration with great learning) duration : 3 years | annual fees : ₹ 5,00,000 (for the entire programme) | intake : 120"
+        ],
+        "Computing Technologies": [
+            "m.tech. computer science and engineering (in collaboration with great learning) duration : 3 years | annual fees : ₹ 5,00,000 (for the entire programme) | intake : 60",
+            "m.tech. computer science and engineering with specialization in full stack – part time (in collaboration with great learning) duration : 3 years | annual fees : ₹ 5,00,000 (for the entire programme) | intake : 12",
+            "m.tech. financial technologies duration : 2 years | annual fees : ₹ 1,60,000 | intake : 30"
+        ],
+        "Data Science And Business Systems": [
+            "m.tech. big data analytics (in collaboration with great learning) duration : 3 years | annual fees : ₹ 5,00,000 (for the entire programme) | intake : 18",
+            "m.tech. data engineering – part time(in collaboration with great learning) duration : 3 years | annual fees : ₹ 5,00,000 (for the entire programme) | intake : 18",
+            "m.tech. data science – part time(in collaboration with great learning) duration : 3 year | annual fees : ₹ 5,00,000 (for the entire programme) | intake : 120"
+        ]
+    },
+    "fees_ug": {},
+    "fees_pg": {},
+    "scholarships": [
+        {
+            "raw_data": [
+                "I Founder's",
+                "Scholarship",
+                "A",
+                "SRMJEEE SRMJEEE Rank 1-100",
+                "(spread across all phases)",
+                "Awarded at the",
+                "time of admission  - - 100% 100% -",
+                "IIT JEE (Mains) IIT JEE (Mains) Rank up to 2000  Awarded at the",
+                "time of admission - - 100% 100% -",
+                "State Toppers",
+                "State Board   Awarded at the",
+                "time of admission - - 100% 100% -",
+                "CBSE  Awarded at the",
+                "time of admission - - 100% 100% -",
+                "District Toppers",
+                "within Tamil Nadu",
+                "Tamil Nadu State Board   Awarded at the",
+                "time of admission - - 100% 100% -",
+                "CBSE  Awarded at the",
+                "time of admission - - 100% 100% -",
+                "Early Bird  Extremely Meritorious Students   Awarded at the",
+                "time of admission - - 100 % - -",
+                "B Sports",
+                "LEVEL-State   Awarded at the",
+                "time of admission 100% 100% 100% 100%",
+                "LEVEL-National   Awarded at the",
+                "time of admission 100% 100% 100% 100%",
+                "LEVEL- International  Awarded at the",
+                "time of admission 100% 100% 100% 100%"
+            ]
+        },
+        {
+            "raw_data": [
+                "II SRM Merit Scholarship",
+                "SRM JEEE Merit",
+                "Scholarship",
+                "(For B. Tech only)",
+                "SRMJEEE Rank 101-500",
+                "(spread across all phases)",
+                "Awarded at the",
+                "time of admission -   - 100%  -  -",
+                "III",
+                "Chancellor",
+                "Constituency",
+                "Scholarship",
+                "A Perambalur",
+                "Constituency On approval of Chancellor  Awarded at the",
+                "time of admission 100% 100% 100% 100% 100%",
+                "B PKMS On approval of Chancellor  Awarded at the",
+                "time of admission 100% 100% 100% - -",
+                "IV Socio-Economic",
+                "Scholarship",
+                "NGOs & Tribal",
+                "Community",
+                "Recommended by",
+                "Puthiyathalaimurai Foundation",
+                "Awarded at the",
+                "time of admission 100% 100% 100% 100% 100%",
+                "Recommended by Agaram",
+                "Foundation",
+                "Awarded at the",
+                "time of admission 100% 100% 100% 100% 100%",
+                "Recommended by Ramakrishna",
+                "Mission",
+                "Awarded at the",
+                "time of admission 100% 100% 100% 100% 100%",
+                "Recommended by Shiv Nadar  Awarded at the",
+                "time of admission 100% 100% 100% 100% 100%",
+                "Recommended by Sathyarthi  Awarded at the",
+                "time of admission 100% 100% 100% 100% 100%",
+                "Low Income",
+                "Families",
+                "Recommended by FEFSI",
+                "Recommended by Chinnathirai",
+                "Awarded at the",
+                "time of admission - - 25-100% - -",
+                "Need Based Seniors Only  - - 25-100% 25-100% -",
+                "Note :  At the discretion of the management from time to time.",
+                "Details of Schemes",
+                "Concession details",
+                "Sl. No",
+                "Category  Sub Category Section Remarks Application",
+                "Fee",
+                "Registration",
+                "(or)",
+                "Processing Fee",
+                "Tuition Fee",
+                "Hostel or",
+                "Transport",
+                "Fee",
+                "Exam Fee"
+            ]
+        },
+        {
+            "raw_data": [
+                "V Unnat Bharat Abhiyan Vendhar Education",
+                "Grants Scheme Recommended by committee Awarded at the time of",
+                "admission  100% 100% 100% 100% 100%",
+                "VI",
+                "Differently Abled",
+                "Scholarship",
+                "Locomotor/Orthopa",
+                "edic Based on their disabilities  First year and Seniors - - 25-100% - -",
+                "Visually impaired Based on their disabilities  First year and Seniors - - 25-100% - -",
+                "Speech & Hearing Based on their disabilities  First year and Seniors - - 25-100% - -",
+                "Mental Disability Based on their disabilities  First year and Seniors - - 25-100% - -",
+                "Multiple Disabilities Based on their disabilities  First year and Seniors - - 25-100% - -",
+                "VII",
+                "SRM Arts and Culture",
+                "Scholarship",
+                "Fine Arts Fine Arts Seniors Only  - - 25-100% - -",
+                "Culture Culture Seniors Only  - - 25-100% - -",
+                "Achievements,",
+                "Accolades/Special",
+                "Talents",
+                "IInd Year onwards - -",
+                "State-25%",
+                "National-50%",
+                "International-75% - -",
+                "VIII Employee Ward",
+                "Scholarship",
+                "Availing EWS for",
+                "the first time  in",
+                "SRM IST",
+                "Teaching staff-20 years exp. above",
+                "Non-Teaching staff-12 years exp. above",
+                "Awarded at the time",
+                "of admission for",
+                "entire course",
+                "(it may be withdrawal",
+                "if they leave the",
+                "organization)  - - 100% - -",
+                "Teaching staff -  > 15 < 20 yrs. exp.",
+                "Non-Teaching staff - > 10 < 12 yrs.  exp. - - 75% - -",
+                "Teaching staff- > 10 < 15 yrs.  exp.",
+                "Non-Teaching staff- > 8 < 10 yrs.  exp. - - 50% - -",
+                "Teaching staff- > 5 < 10 yrs.  exp.",
+                "Non-Teaching staff- > 5 < 8 yrs.  exp. - - 25% - -",
+                "Availing EWS for",
+                "the second time in",
+                "SRM IST",
+                "Teaching staff-10 years and above exp.",
+                "Non-Teaching staff-8 years and above  - - 25% - -",
+                "Teaching staff- > 5 < 10 yrs.  exp.",
+                "Non-Teaching staff- > 5 < 8 yrs.  exp. - - 10% - -",
+                "IX Alumni Scholarship Alumni Ward",
+                "Scholarship",
+                "Years after course completion-UG at",
+                "least 15 years/PG at least 10 years",
+                "Awarded at the time",
+                "of admission -  - 25% - -",
+                "Selection Procedure:",
+                "Online applications for the award of scholarship will be kept open in July every year. Processing will be done by the scholarship committee and selection of",
+                "awardees will be done by a committee consisting of senior faculty members, Director(s) of SRM IST. The decision of the scholarship committee would be",
+                "communicated to the selected candidates.",
+                "Note:",
+                "(i) A candidate is eligible for scholarship under any ONE category only.",
+                "(ii) Scholarships are not applicable for any NEET based program, Pharm. D & Pharm. D (PB) and any other programmes which the management may",
+                "decide from time to time.",
+                "Details of Schemes",
+                "Concession details",
+                "Sl. No",
+                "Category  Sub Category Section Remarks Application",
+                "Fee",
+                "Registration",
+                "(or)",
+                "Processing Fee",
+                "Tuition Fee",
+                "Hostel or",
+                "Transport",
+                "Fee",
+                "Books/Unifo",
+                "rm Fee",
+                "X Performance Based SRMIST Examinations SRMIST Examinations Seniors Only",
+                "As determined by the scholarship committee",
+                "May change every year based on performance",
+                "XI Concessions Humanitarian/Reference",
+                "Fresh",
+                "First year and Seniors As per Approval",
+                "Continuation of",
+                "Concession",
+                "XII Defence Scholarship Defence Personnel",
+                "Fresh (i) Retired from",
+                "defence",
+                "(ii) Still Serving  - - up to",
+                "25% - - Continuation of",
+                "Concession",
+                "XIII Sponsored",
+                "Scholarships",
+                "State Govt. Sponsored BC / MBC / BCM / SC / ST First year and Seniors",
+                "As per Norms of the individual scheme Central Govt. Sponsored BC, BCM, SC, ST First year and Seniors",
+                "Corporate/NGO etc., Specify First year and Seniors"
+            ]
+        }
+    ],
+    "general_info": {
+        "vision": "To emerge as a World – Class University in creating and disseminating knowledge and providing students a unique learning experience in Science, Technology, Medicine, Management and other areas of Scholarship that will best serve the world and for the betterment of mankind.",
+        "mission": "MOVE UP through international alliances and collaborative initiatives to achieve global excellence.\nACCOMPLISH A PROCESS to advance knowledge in a rigorous academic and research environment.\nATTRACT AND BUILD PEOPLE in a rewarding and an inspiring environment by fostering freedom, empowerment, creativity and innovation."
+    },
+    "last_updated": "2025-04-15T13:48:15.312984"
+}
