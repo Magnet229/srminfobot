@@ -2,7 +2,7 @@
 
 document.addEventListener('DOMContentLoaded', () => {
     // === Constants ===
-    const FLASK_BASE_URL = 'http://localhost:8081'; // Replace if different
+    const FLASK_BASE_URL = 'http://localhost:5000'; // Replace if different
     const API_KEY = "AIzaSyDAK3gTEiJFynqHm7-jvrL-ePM_YoHHbpM";
     const API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
     const MAX_HISTORY_LENGTH = 5; // Number of conversation turns to remember
@@ -61,6 +61,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.warn("stopCurrentTypingAndReset: isResponseGenerating was true but no interval found. Forcing state reset anyway.");
             }
         }
+        console.trace("Who cleared the interval?");
+
     
         // Find the last incoming message which might still be "loading"
         const lastMessage = chatList.querySelector('.message.incoming:last-child');
@@ -78,6 +80,8 @@ document.addEventListener('DOMContentLoaded', () => {
     
         // --- Reset state flags ---
         isResponseGenerating = false; // Set the main flag to false
+        if (!isResponseGenerating) return; // Already reset
+
         console.log(`stopCurrentTypingAndReset: Set isResponseGenerating = ${isResponseGenerating}`); // Verify it's false
     
         // --- Reset button appearance and enable it ---
@@ -615,6 +619,9 @@ document.addEventListener('DOMContentLoaded', () => {
     };*/
 
     // Show Typing Effect
+    const CONFIG = {
+        TYPING_SPEED: 10 // Configurable typing speed
+    };
     const showTypingEffect = (text, textElement, messageDiv) => {
         console.log("--- showTypingEffect: STARTED ---");
     
@@ -658,7 +665,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Note: This check is a defensive measure; the clearInterval in stopCurrentTypingAndReset
             // is the primary mechanism for stopping.
             if (!currentTypingInterval) {
-                 console.warn("intervalCallback: Interval seems to have been cleared externally. Stopping callback execution.");
+                 console.log("intervalCallback: Interval seems to have been cleared externally. Stopping callback execution.");
                  // We don't clear again here, just stop executing this instance.
                  return;
             }
@@ -685,7 +692,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 // Note: History saving is handled within stopCurrentTypingAndReset
             }
-        }; // --- End of intervalCallback definition ---
+        }; // --- End of intervalCallback definition --- 
+        console.trace("Who cleared the interval?");
+
         currentTypingInterval = setInterval(intervalCallback, 1000 / TYPING_SPEED_FACTOR / 5);
         console.log("Started new typing interval:", currentTypingInterval);
     
@@ -696,25 +705,7 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log("--- showTypingEffect: FINISHED (Setup Complete) ---");
     };
 
-    // Pause/Resume Typing Effect
-    /*const pauseResumeResponse = () => {
-        if (!isResponseGenerating || !currentTypingInterval) return; // Only act if typing
-
-        if (isTypingPaused) {
-            sendButton.textContent = "pause";
-            isTypingPaused = false;
-        } else {
-            sendButton.textContent = "play_arrow"; // Show play icon when paused
-            isTypingPaused = true;
-            // Don't clear interval, just pause execution inside it
-        }
-    };*/
-
-    // --- Contextual Suggestions (Commented Out - Requires HTML/CSS) ---
     
-    // --- End Interval Function ---
-
-    // Start the new interval
     
 
     

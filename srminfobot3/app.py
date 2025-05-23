@@ -1,5 +1,3 @@
-# --- START OF FILE app.py ---
-
 import eel
 import sys
 import os
@@ -8,13 +6,11 @@ import google.generativeai as genai
 from threading import Thread
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-# Remove scraper imports if parsing is done offline - DONE
-# from main import SRMScraper # REMOVED
-# from scraper_integration import SRMKnowledgeBase, ScraperManager # REMOVED
+from main import SRMScraper
+from scraper_integration import SRMKnowledgeBase, ScraperManager
 import logging
-import json # Add json import - DONE
-# from datetime import datetime # Add datetime import - Not strictly needed by the provided code, but good practice if you use timestamps later. Let's keep it out for now unless explicitly required.
-import re   # Add re import - DONE
+import re
+import json
 
 logging.basicConfig(level=logging.DEBUG)
 load_dotenv()
@@ -30,8 +26,6 @@ genai.configure(api_key=GOOGLE_API_KEY)
 
 # Gemini model
 model = genai.GenerativeModel("gemini-1.5-flash")  # Or 'gemini-pro-vision' if you need image input
-
-# --- Load Structured Data --- # ADDED THIS SECTION
 STRUCTURED_DATA_FILE = 'srm_structured_data.json'
 srm_data = {}
 try:
@@ -47,7 +41,149 @@ except json.JSONDecodeError:
 except Exception as e:
      logging.error(f"An error occurred loading {STRUCTURED_DATA_FILE}: {e}")
 
-# --- Predefined Answers & Keywords (Keep these as they handle general topics) ---
+
+def normalize_query_program(query):
+    """Extracts potential program names and normalizes them."""
+    # Basic: look for patterns like "b.tech cse", "mtech vlsi", etc.
+    # Convert to lowercase for matching keys in srm_data
+    query = query.lower()
+    # Remove fee/admission related words to isolate program name
+    query = re.sub(r'\b(fee|fees|cost|admission|application|process)\b', '', query, flags=re.IGNORECASE)
+    # Attempt to clean - this is basic, might need refinement
+    query = query.replace('b.tech.', 'b.tech').replace('m.tech.', 'm.tech')
+    query = re.sub(r'[^\w\s.-]', '', query) # Remove punctuation except dots/hyphens
+    query = re.sub(r'\s+', ' ', query).strip()
+    # Very simple: assume the remaining part is the program name - needs improvement
+    # Maybe look for keywords like 'engineering', 'biotechnology' etc.
+    return query # Return the cleaned query, potentially the program name
+
+def search_fees(program_query):
+    """Searches the structured data for fee information."""
+    if not srm_data or ('fees_ug' not in srm_data and 'fees_pg' not in srm_data):
+        return None
+
+    normalized_query = normalize_query_program(program_query)
+    logging.debug(f"Searching fees for normalized query: '{normalized_query}'")
+
+    # Check both UG and PG fees
+    fee_data = srm_data.get('fees_ug', {}).get(normalized_query) or \
+               srm_data.get('fees_pg', {}).get(normalized_query)
+
+    if fee_data:
+        logging.info(f"Found fee data for '{normalized_query}'")
+        # Format the response
+        return f"Fee structure for {normalized_query.title()}:\n• Duration: {fee_data.get('duration', 'N/A')}\n• Annual Fees: ₹{fee_data.get('annual_fees', 'N/A')}\n• Intake: {fee_data.get('intake', 'N/A')}"
+    else:
+         # Basic substring search as fallback (less accurate)
+         logging.debug(f"Exact match failed for '{normalized_query}'. Trying substring search.")
+         all_fees = {**srm_data.get('fees_ug', {}), **srm_data.get('fees_pg', {})}
+         possible_matches = []
+         for prog_key, fee_details in all_fees.items():
+              if normalized_query in prog_key:
+                   possible_matches.append(
+                        f"{prog_key.title()}:\n  • Duration: {fee_details.get('duration', 'N/A')}\n  • Annual Fees: ₹{fee_details.get('annual_fees', 'N/A')}\n  • Intake: {fee_details.get('intake', 'N/A')}"
+                   )
+         if possible_matches:
+              logging.info(f"Found possible fee matches for '{normalized_query}' via substring.")
+              response = "Found possible matches for your query:\n" + "\n\n".join(possible_matches[:3]) # Limit results
+              return response
+
+    logging.warning(f"Could not find fee data for query: '{program_query}' (normalized: '{normalized_query}')")
+    return None
+
+
+def search_scholarships(query):
+    """Searches the structured scholarship data."""
+    if not srm_data or 'scholarships' not in srm_data:
+        return None
+
+    query_lower = query.lower()
+    # Keywords for general scholarship info
+    general_keywords = ['scholarship', 'scholarships', 'financial aid', 'concession']
+    is_general_query = any(kw in query_lower for kw in general_keywords)
+
+    found_scholarships = []
+
+    # Search based on keywords in the raw data of each scholarship entry
+    # (This needs improvement based on how parse_scholarships structures the data)
+    for scholarship in srm_data['scholarships']:
+        # Use 'Category' if parsed, otherwise search raw_data
+        category = scholarship.get('Category', '').lower()
+        raw_data_str = ' '.join(scholarship.get('raw_data', [])).lower()
+
+        if category and category in query_lower: # Match specific category name
+             found_scholarships.append(scholarship)
+        elif any(kw in query_lower for kw in general_keywords) or \
+             any(term in raw_data_str for term in query_lower.split() if len(term) > 3): # Match terms
+             found_scholarships.append(scholarship)
+
+    if found_scholarships:
+        # Format the response - **NEEDS REFINEMENT BASED ON PARSED STRUCTURE**
+        response_parts = ["Here is information on scholarships based on your query:"]
+        for schol in found_scholarships[:5]: # Limit results
+            # Example formatting - adjust heavily!
+            category = schol.get('Category', 'Details')
+            details = "\n  ".join(schol.get('raw_data', ['No details available.']))
+            response_parts.append(f"\n--- {category} ---\n  {details}")
+        return "\n".join(response_parts)
+
+    elif is_general_query:
+         return "SRM offers various scholarships like Founder's Scholarship, Merit Scholarship, Socio-Economic Scholarships, etc. Please specify if you are looking for a particular one, or visit the official SRM website's admission section for detailed criteria."
+
+    return None
+
+def search_programs(query):
+    """Lists programs, optionally filtered by department or keywords."""
+    if not srm_data or ('programs_ug' not in srm_data and 'programs_pg' not in srm_data):
+        return None
+
+    query_lower = query.lower()
+    response_parts = []
+    found = False
+
+    # Combine UG and PG for searching
+    all_programs = {**srm_data.get('programs_ug', {}), **srm_data.get('programs_pg', {})}
+
+    # Check if query matches a department name
+    matched_dept = None
+    for dept in all_programs.keys():
+        if dept.lower() in query_lower:
+            matched_dept = dept
+            break
+
+    if matched_dept:
+        response_parts.append(f"Programs offered by the Department of {matched_dept}:")
+        ug_progs = srm_data.get('programs_ug', {}).get(matched_dept, [])
+        pg_progs = srm_data.get('programs_pg', {}).get(matched_dept, [])
+
+        if ug_progs:
+             response_parts.append("\nUndergraduate:")
+             for prog in ug_progs: response_parts.append(f" • {prog.title()}")
+             found = True
+        if pg_progs:
+             response_parts.append("\nPostgraduate:")
+             for prog in pg_progs: response_parts.append(f" • {prog.title()}")
+             found = True
+    else:
+        # General search for program keywords across all departments
+        keywords = [term for term in query_lower.split() if len(term) > 3 and term not in ['list', 'programs', 'courses', 'department']]
+        if keywords:
+             response_parts.append("Found programs matching your query:")
+             count = 0
+             for dept, programs in all_programs.items():
+                  for prog in programs:
+                       if any(kw in prog for kw in keywords):
+                            response_parts.append(f" • {prog.title()} (Dept: {dept})")
+                            found = True
+                            count += 1
+                            if count >= 10: break # Limit results
+                  if count >= 10: break
+
+
+    return "\n".join(response_parts) if found else None
+
+# Initialize components
+knowledge_base = SRMKnowledgeBase()
 srmPredefinedAnswers = {
     'en': {
         'admissions': """SRM University admissions process involves:
@@ -224,260 +360,55 @@ srmPredefinedAnswers = {
 - आधुनिक ऑपरेशन थिएटर
 - योग्य चिकित्सा पेशेवर और कर्मचारी"""
     }
-    # --- END HINDI --- # KEPT
+    # --- END HINDI ---
 }
 
 
 # Keywords to identify predefined topics (add more as needed)
 PREDEFINED_TOPIC_KEYWORDS = {
-    # These handle general topics, FEES/SCHOLARSHIP/PROGRAMS handled separately below
     'hospital': [
         'hospital', 'health', 'medical', 'clinic', 'doctor', 'emergency', 'pharmacy',  # English
         'மருத்துவமனை', 'சுகாதாரம்', 'மருத்துவம்', 'மருந்தகம்', 'மருத்துவர்', 'அவசரம்',  # Tamil
         'హాస్పిటల్', 'ఆసుపత్రి', 'ఆరోగ్యం', 'వైద్య', 'క్లినిక్', 'డాక్టర్', 'ఫార్మసీ', 'అత్యవసరం', 'ఆరోగ్య సేవలు', # Telugu (added ఆరోగ్య సేవలు)
         'ആശുപത്രി', 'ആരോഗ്യം', 'മെഡിക്കൽ', 'ക്ലിനിക്ക്', 'ഡോക്ടർ', 'ഫാർമസി', 'അടിയന്തരാവസ്ഥ', # Malayalam
-         'अस्पताल', 'स्वास्थ्य', 'चिकित्सा', 'क्लिनिक', 'डॉक्टर', 'आपातकाल', 'फार्मेसी', 'सेवाएं', # Hindi - ADDED
+         'अस्पताल', 'स्वास्थ्य', 'चिकित्सा', 'क्लिनिक', 'डॉक्टर', 'आपातकाल', 'फार्मेसी', 'सेवाएं' 
     ],
     'admissions': [
         'admission', 'admissions', 'apply', 'enroll', 'register', 'application', 'srmjeee', # English
         'சேர்க்கை', 'விண்ணப்பிக்க', 'பதிவு', # Tamil
         'ప్రవేశం', 'నమోదు', 'దరఖాస్తు', # Telugu
         'അഡ്മിഷൻ', 'രജിസ്റ്റർ', 'അപേക്ഷിക്കുക', # Malayalam
-         'प्रवेश', 'आवेदन', 'दाखिला', 'पंजीकरण', 'अप्लाई', # Hindi - ADDED
+         'प्रवेश', 'आवेदन', 'दाखिला', 'पंजीकरण', 'अप्लाई' # Hindi
     ],
     'placements': [
         'placement', 'placements', 'job', 'jobs', 'career', 'recruit', 'company', 'salary', # English
         'வேலைவாய்ப்பு', 'வேலை', 'நிறுவனம்', 'சம்பளம்', # Tamil
         'ప్లేస్‌మెంట్', 'ఉద్యోగం', 'కంపెనీ', 'జీతం', # Telugu
         'പ്ലേസ്മെന്റ്', 'തൊഴിൽ', 'കമ്പനി', 'ശമ്പളം', # Malayalam
-        'प्लेसमेंट', 'नौकरी', 'कंपनी', 'वेतन', 'भर्ती', 'करियर', # Hindi - ADDED
+        'प्लेसमेंट', 'नौकरी', 'कंपनी', 'वेतन', 'भर्ती', 'करियर' # Hindi
     ],
     'campus': [
         'campus', 'life', 'facilities', 'hostel', 'library', 'sports', 'wifi', # English
         'வளாகம்', 'வாழ்க்கை', 'வசதிகள்', 'விடுதி', 'நூலகம்', 'விளையாட்டு', # Tamil
         'క్యాంపస్', 'జీవితం', 'సౌకర్యాలు', 'హాస్టల్', 'లైబ్రరీ', 'క్రీడలు', # Telugu
         'ക്യാമ്പസ്', 'ജീവിതം', 'സൗകര്യങ്ങൾ', 'ഹോസ്റ്റൽ', 'ലൈബ്രറി', 'സ്പോർട്സ്', # Malayalam
-        'कैंपस', 'जीवन', 'सुविधाएं', 'छात्रावास', 'पुस्तकालय', 'खेल', 'वाईफ़ाई', 'इंफ्रास्ट्रक्चर', # Hindi - ADDED
+        'कैंपस', 'जीवन', 'सुविधाएं', 'छात्रावास', 'पुस्तकालय', 'खेल', 'वाईफ़ाई', 'इंफ्रास्ट्रक्चर' # Hindi
     ]
-    # NOTE: Removed specific fee/scholarship/program keywords from *this* dict
-    # as they are handled by specific checks later.
-} # KEPT
+    # Add other predefined topics like 'courses', 'fees' etc. with their keywords
+}
 
-# --- New Search Functions for Structured Data --- # ADDED THESE FUNCTIONS
-def normalize_query_program(query):
-    """Extracts potential program names and normalizes them."""
-    # Basic: look for patterns like "b.tech cse", "mtech vlsi", etc.
-    # Convert to lowercase for matching keys in srm_data
-    query = query.lower()
-    # Remove fee/admission related words to isolate program name
-    query = re.sub(r'\b(fee|fees|cost|admission|application|process)\b', '', query, flags=re.IGNORECASE)
-    # Attempt to clean - this is basic, might need refinement
-    query = query.replace('b.tech.', 'b.tech').replace('m.tech.', 'm.tech')
-    query = re.sub(r'[^\w\s.-]', '', query) # Remove punctuation except dots/hyphens
-    query = re.sub(r'\s+', ' ', query).strip()
-    # Very simple: assume the remaining part is the program name - needs improvement
-    # Maybe look for keywords like 'engineering', 'biotechnology' etc.
-    return query # Return the cleaned query, potentially the program name
+scraper = SRMScraper()
+scraper_manager = ScraperManager(scraper, knowledge_base)
 
-def search_fees(program_query):
-    """Searches the structured data for fee information."""
-    if not srm_data or ('fees_ug' not in srm_data and 'fees_pg' not in srm_data):
-        return None
+# Check and initialize the knowledge base if the data file is empty or does not exist
+if not os.path.exists(knowledge_base.data_file) or os.path.getsize(knowledge_base.data_file) == 0:
+    logging.info("Initializing knowledge base with default data")
+    try:
+        scraper_manager.check_and_update()
+    except Exception as e:
+        logging.error(f"Error during initial scraping: {e}")
 
-    normalized_query = normalize_query_program(program_query)
-    logging.debug(f"Searching fees for normalized query: '{normalized_query}'")
-
-    # Check both UG and PG fees
-    fee_data = srm_data.get('fees_ug', {}).get(normalized_query) or \
-               srm_data.get('fees_pg', {}).get(normalized_query)
-
-    if fee_data:
-        logging.info(f"Found fee data for '{normalized_query}'")
-        # Format the response
-        return f"Fee structure for {normalized_query.title()}:\n• Duration: {fee_data.get('duration', 'N/A')}\n• Annual Fees: ₹{fee_data.get('annual_fees', 'N/A')}\n• Intake: {fee_data.get('intake', 'N/A')}"
-    else:
-         # Basic substring search as fallback (less accurate)
-         logging.debug(f"Exact match failed for '{normalized_query}'. Trying substring search.")
-         all_fees = {**srm_data.get('fees_ug', {}), **srm_data.get('fees_pg', {})}
-         possible_matches = []
-         for prog_key, fee_details in all_fees.items():
-              # Use lowercase for comparison robustness
-              if normalized_query in prog_key.lower():
-                   possible_matches.append(
-                        f"{prog_key.title()}:\n  • Duration: {fee_details.get('duration', 'N/A')}\n  • Annual Fees: ₹{fee_details.get('annual_fees', 'N/A')}\n  • Intake: {fee_details.get('intake', 'N/A')}"
-                   )
-         if possible_matches:
-              logging.info(f"Found possible fee matches for '{normalized_query}' via substring.")
-              response = "Found possible matches for your query:\n" + "\n\n".join(possible_matches[:3]) # Limit results
-              return response
-
-    logging.warning(f"Could not find fee data for query: '{program_query}' (normalized: '{normalized_query}')")
-    return None
-
-
-def search_scholarships(query):
-    """Searches the structured scholarship data."""
-    if not srm_data or 'scholarships' not in srm_data:
-        return None
-
-    query_lower = query.lower()
-    # Keywords for general scholarship info
-    general_keywords = ['scholarship', 'scholarships', 'financial aid', 'concession', 'ews', 'founder', 'merit'] # Added keywords
-    is_general_query = any(kw in query_lower for kw in general_keywords)
-
-    found_scholarships = []
-
-    # Search based on keywords in the raw data of each scholarship entry
-    # Assumes structure from a parser like: [{'Category': 'Founder\'s', 'raw_data': ['100% tuition...', ...]}, ...]
-    for scholarship in srm_data.get('scholarships', []): # Use .get for safety
-        if not isinstance(scholarship, dict): # Basic type check
-            logging.warning(f"Skipping non-dict item in scholarships list: {scholarship}")
-            continue
-
-        category = scholarship.get('Category', '').lower()
-        # Ensure raw_data is a list of strings before joining
-        raw_data_list = scholarship.get('raw_data', [])
-        if not isinstance(raw_data_list, list):
-            raw_data_list = [str(raw_data_list)] # Attempt to convert if not a list
-
-        raw_data_str = ' '.join(map(str, raw_data_list)).lower() # Convert items to string before joining
-
-        # Improved matching logic
-        match_reason = None
-        if category and category in query_lower: # Match specific category name
-            match_reason = f"Category match ('{category}')"
-        elif any(kw in query_lower for kw in general_keywords): # Match general scholarship keywords
-             match_reason = f"General keyword match"
-        elif any(term in raw_data_str for term in query_lower.split() if len(term) > 3): # Match specific terms from query in details
-             match_reason = f"Term match in details"
-
-        if match_reason:
-            logging.debug(f"Scholarship matched: {scholarship.get('Category', 'Unknown')} due to {match_reason}")
-            found_scholarships.append(scholarship)
-
-
-    if found_scholarships:
-        response_parts = ["Here is information on scholarships based on your query:"]
-        # Use a set to avoid duplicate entries if matched multiple ways
-        unique_categories_shown = set()
-        added_count = 0
-        for schol in found_scholarships:
-            category = schol.get('Category', 'Details')
-            if category not in unique_categories_shown and added_count < 5: # Limit results & prevent duplicates
-                details_list = schol.get('raw_data', ['No details available.'])
-                # Format details as bullet points
-                formatted_details = "\n  • ".join(filter(None, map(str.strip, details_list))) # Ensure items are strings and remove empty ones
-                if formatted_details:
-                    response_parts.append(f"\n--- {category.title()} ---\n  • {formatted_details}")
-                else:
-                    response_parts.append(f"\n--- {category.title()} ---\n  No specific details available.")
-                unique_categories_shown.add(category)
-                added_count += 1
-        return "\n".join(response_parts)
-
-    elif is_general_query:
-         # Provide a more informative general response if no specific match
-         return "SRM offers various scholarships, including Founder's Scholarship, Merit Scholarship, Socio-Economic Scholarships, Differently-Abled Scholarships, and SRM Arts and Culture Scholarships. Could you specify which one you're interested in, or would you like general criteria?"
-
-    return None
-
-def search_programs(query):
-    """Lists programs, optionally filtered by department or keywords."""
-    if not srm_data or ('programs_ug' not in srm_data and 'programs_pg' not in srm_data):
-        return None
-
-    query_lower = query.lower()
-    response_parts = []
-    found = False
-
-    # Combine UG and PG for searching, ensuring values are lists
-    all_programs_by_dept = {
-        **srm_data.get('programs_ug', {}),
-        **srm_data.get('programs_pg', {})
-    }
-
-    # Normalize department keys for matching
-    dept_map = {dept.lower(): dept for dept in all_programs_by_dept.keys()}
-
-    # Check if query matches a department name (case-insensitive)
-    matched_dept_key = None
-    # Prioritize longer matches first if query contains multiple potential dept names
-    sorted_dept_keys = sorted(dept_map.keys(), key=len, reverse=True)
-    for dept_key_lower in sorted_dept_keys:
-        if dept_key_lower in query_lower:
-            matched_dept_key = dept_key_lower
-            break
-
-    if matched_dept_key:
-        original_dept_name = dept_map[matched_dept_key]
-        response_parts.append(f"Programs offered by the Department of {original_dept_name}:")
-
-        # Safely get programs using the original department name
-        ug_progs = srm_data.get('programs_ug', {}).get(original_dept_name, [])
-        pg_progs = srm_data.get('programs_pg', {}).get(original_dept_name, [])
-
-        # Ensure they are lists before iterating
-        if isinstance(ug_progs, list) and ug_progs:
-             response_parts.append("\nUndergraduate:")
-             for prog in ug_progs: response_parts.append(f" • {prog.title()}")
-             found = True
-        if isinstance(pg_progs, list) and pg_progs:
-             response_parts.append("\nPostgraduate:")
-             for prog in pg_progs: response_parts.append(f" • {prog.title()}")
-             found = True
-
-        if not found:
-             response_parts.append("No specific programs listed for this department in the available data.")
-             found = True # Still count as found to prevent keyword search
-
-    # Only do keyword search if no department was matched
-    if not found:
-        # General search for program keywords across all departments
-        # Exclude common words and department names already checked
-        exclude_words = ['list', 'programs', 'courses', 'department', 'details', 'about'] + list(dept_map.keys())
-        keywords = [term for term in query_lower.split() if len(term) > 2 and term not in exclude_words]
-
-        if keywords:
-             logging.debug(f"Searching programs with keywords: {keywords}")
-             response_parts.append("Found programs matching your query:")
-             count = 0
-             matched_progs = set() # Avoid duplicates
-
-             for dept, programs in all_programs_by_dept.items():
-                  if isinstance(programs, list): # Ensure it's a list
-                      for prog in programs:
-                           prog_lower = prog.lower() # Search case-insensitively
-                           if any(kw in prog_lower for kw in keywords):
-                                prog_info = f" • {prog.title()} (Dept: {dept})"
-                                if prog_info not in matched_progs:
-                                    response_parts.append(prog_info)
-                                    matched_progs.add(prog_info)
-                                    found = True
-                                    count += 1
-                                    if count >= 15: break # Limit results slightly more
-                  if count >= 15: break
-
-             if not found:
-                 # Adjust message if keywords were present but no match
-                 response_parts = [f"Couldn't find programs specifically matching '{' '.join(keywords)}'. You can ask about specific departments."]
-                 found = True # Set found to true to prevent falling through to Gemini unnecessarily
-
-    return "\n".join(response_parts) if found else None
-
-# Initialize components - REMOVED
-# knowledge_base = SRMKnowledgeBase() # REMOVED
-# scraper = SRMScraper() # REMOVED
-# scraper_manager = ScraperManager(scraper, knowledge_base) # REMOVED
-
-# Check and initialize the knowledge base if the data file is empty or does not exist - REMOVED
-# if not os.path.exists(knowledge_base.data_file) or os.path.getsize(knowledge_base.data_file) == 0: # REMOVED
-#     logging.info("Initializing knowledge base with default data") # REMOVED
-#     try: # REMOVED
-#         scraper_manager.check_and_update() # REMOVED
-#     except Exception as e: # REMOVED
-#         logging.error(f"Error during initial scraping: {e}") # REMOVED
-
-# Function to query the knowledge base - REWRITTEN
+# Function to query the knowledge base
 @app.route("/api/query-knowledge-base", methods=["POST"])
 def query_knowledge_base():
     query = None # Initialize query to None
@@ -500,196 +431,159 @@ def query_knowledge_base():
         query_lower = query.lower() # Convert query to lowercase once
         logging.debug(f"Lowercase Query: '{query_lower}'")
 
-        response = None # Variable to hold the final response
-
-        # --- ORDER OF CHECKS ---
-
-        # 1. General Predefined Answers (Hospital, Campus Life Overview, etc.)
-        #    Uses PREDEFINED_TOPIC_KEYWORDS which *excludes* fees/scholarships/programs
-        logging.debug("--- Checking General Predefined Answers ---")
+        # --- STEP 1: Check for Predefined Topics FIRST ---
+        logging.debug("--- Checking Predefined Topics ---")
         matched_topic_key = None
         for topic_key, keywords in PREDEFINED_TOPIC_KEYWORDS.items():
             logging.debug(f"Checking topic: '{topic_key}'")
             keyword_found = False
             for keyword in keywords:
-                # Basic check: keyword exists in the query
                 if keyword in query_lower:
-                    # Optional: Add more sophisticated matching here if needed (e.g., word boundaries)
-                    logging.debug(f"  MATCH FOUND! Keyword '{keyword}' in query '{query_lower}' for general topic '{topic_key}'")
+                    logging.debug(f"  MATCH FOUND! Keyword '{keyword}' in query '{query_lower}'")
                     matched_topic_key = topic_key
                     keyword_found = True
                     break # Stop checking keywords for this topic
             if keyword_found:
-                logging.debug(f"General Topic '{matched_topic_key}' identified.")
+                logging.debug(f"Topic '{matched_topic_key}' identified.")
                 break # Stop checking other topics
 
+        logging.debug(f"Predefined Topic Check Complete. Matched Topic Key: {matched_topic_key}")
+
+        # If a topic was matched, try to return the predefined answer
         if matched_topic_key:
-            logging.debug(f"Attempting to retrieve general predefined answer for topic '{matched_topic_key}', language '{language_code}'")
+            logging.debug(f"Attempting to retrieve predefined answer for topic '{matched_topic_key}', language '{language_code}'")
+            # Check if language exists AND if the topic key exists for that language
             if language_code in srmPredefinedAnswers and matched_topic_key in srmPredefinedAnswers[language_code]:
                 predefined_response = srmPredefinedAnswers[language_code][matched_topic_key]
-                logging.info(f"SUCCESS: Found general predefined answer for '{matched_topic_key}' in '{language_code}'.")
+                logging.info(f"SUCCESS: Found predefined answer for '{matched_topic_key}' in '{language_code}'.")
 
-                # Apply simple formatting
+                # Format the predefined response
                 formatted_predefined_response = ""
                 lines = predefined_response.strip().split('\n')
                 for line in lines:
                     line = line.strip()
                     if line.startswith('- '):
-                         formatted_predefined_response += f"• {line[2:].strip()}\n" # Use bullet symbol
+                         formatted_predefined_response += f"\n• {line[2:].strip()}\n"
                     elif line:
-                         formatted_predefined_response += f"{line}\n"
-                response = formatted_predefined_response.strip()
+                         formatted_predefined_response += f"\n{line}\n"
 
+                # --- DETAILED LOGGING: Returning Predefined ---
+                logging.debug(f"Formatted Predefined Response:\n{formatted_predefined_response.strip()}")
+                logging.debug(f"--- END Request (Predefined) ---")
+                # --- End Logging ---
+                return jsonify({
+                    "status": "success",
+                    "response": formatted_predefined_response.strip()
+                })
             else:
-                logging.warning(f"General predefined topic '{matched_topic_key}' matched, but NO ANSWER found for language '{language_code}'. Proceeding...")
+                logging.warning(f"Predefined topic '{matched_topic_key}' matched, but NO ANSWER found for language '{language_code}'. Falling back.")
         else:
-            logging.debug("No general predefined topic matched the query.")
+            logging.debug("No predefined topic matched the query.")
+        # --- END Predefined Check ---
 
 
-        # 2. Specific Structured Data Search (Fees, Scholarships, Programs)
-        #    Only run these checks if a general predefined answer wasn't found.
-        if response is None:
-            fee_keywords = ['fee', 'fees', 'cost', 'tuition', 'price', 'structure', 'payment', 'amount', 'rupees', '₹']
-            scholarship_keywords = ['scholarship', 'scholarships', 'financial aid', 'concession', 'ews', 'founder', 'merit', 'grant', 'waiver']
-            program_keywords = ['program', 'programs', 'course', 'courses', 'department', 'departments', 'major', 'specialization', 'b.tech', 'm.tech', 'degree', 'branch', 'discipline'] # Added more variations
+        # --- STEP 2: Search Internal Knowledge Base (Scraped Data) ---
+        logging.debug("--- Searching Knowledge Base ---")
+        # ... (rest of the KB search logic - keep it) ...
+        kb_results = knowledge_base.search_knowledge_base(query)
+        kb_response = knowledge_base.format_response(kb_results)
 
-            logging.debug("--- Checking Specific Structured Data ---")
+        if kb_response:
+            logging.info(f"Found response in local KB for query: '{query}'.")
+            # --- DETAILED LOGGING: Returning KB ---
+            logging.debug(f"Formatted KB Response:\n{kb_response}") # Assuming kb_response is already formatted string
+            logging.debug(f"--- END Request (KB) ---")
+            # --- End Logging ---
+            return jsonify({
+                "status": "success",
+                "response": kb_response
+            })
+        else:
+             logging.debug("No relevant response found in KB.")
 
-            # Check for Fees
-            if any(kw in query_lower for kw in fee_keywords):
-                logging.debug("Query contains fee keywords. Checking structured data for Fees...")
-                response = search_fees(query) # Pass original query for better context in normalization
-                if response:
-                    logging.info("Found fee information in structured data.")
-                else:
-                    logging.info("Fee keywords present, but no specific fee data found in structured data.")
+        # --- STEP 3: Fallback to Gemini API (If KB also failed) ---
+        logging.info(f"No relevant information found in knowledge base for '{query}'. Querying Gemini in language '{language_code}'...")
 
-            # Check for Scholarships (if fees didn't match)
-            if response is None and any(kw in query_lower for kw in scholarship_keywords):
-                 logging.debug("Query contains scholarship keywords. Checking structured data for Scholarships...")
-                 response = search_scholarships(query)
-                 if response:
-                     logging.info("Found scholarship information in structured data.")
-                 else:
-                    logging.info("Scholarship keywords present, but no specific scholarship data found in structured data.")
-
-            # Check for Programs (if fees/scholarships didn't match)
-            if response is None and any(kw in query_lower for kw in program_keywords):
-                logging.debug("Query contains program/department keywords. Checking structured data for Programs...")
-                response = search_programs(query)
-                if response:
-                    logging.info("Found program/department information in structured data.")
-                else:
-                    logging.info("Program/department keywords present, but no specific program data found in structured data.")
-
-
-        # 3. Fallback to Gemini API (If still no response after all checks)
-        if response is None:
-            logging.info(f"No specific answer found in predefined or structured data. Querying Gemini in language '{language_code}'...")
-
-            try:
-                language_map = {
-                    'en': 'English', 'ta': 'Tamil', 'te': 'Telugu', 'ml': 'Malayalam', 'hi': 'Hindi' # Added Hindi
-                }
-                language_name = language_map.get(language_code, 'English') # Default to English if code unknown
-
-                strict_prompt = f"""
-                You are SRM InfoBot, a helpful assistant for SRM University (India).
-                The user's query is: "{query}"
-
-                **VERY IMPORTANT INSTRUCTION:** Your response MUST be **ONLY** in the **{language_name}** language (language code: {language_code}).
-                **DO NOT** use English or any other language unless the requested language is English.
-                **DO NOT** include explanations like "Unfortunately, I don't have..." or "I couldn't find information...".
-                **DO NOT** apologize for missing information.
-
-                1. Prioritize information specifically about **SRM University**.
-                2. If you have specific, factual information about SRM University relevant to the query "{query}", provide it concisely in **{language_name}**.
-                3. If you DO NOT have specific SRM information for the query "{query}", provide a *general* answer about the topic (like campus life, admissions, course types, etc.) based on typical university information in India, but ensure the answer is still **strictly and ONLY in {language_name}**. Avoid making up SRM-specific details.
-
-                Generate ONLY the answer text in **{language_name}**. No preambles, no apologies, no language explanations. Format the response clearly, using bullet points (like • point) where appropriate for lists.
-                """
-
-                logging.debug(f"Sending prompt to Gemini (Lang: {language_name}):\n{strict_prompt[:500]}...") # Log beginning of prompt
-                gemini_response = model.generate_content(strict_prompt)
-
-                # Extract text (handle different response structures)
-                response_text = None
-                try:
-                    if hasattr(gemini_response, 'text') and gemini_response.text:
-                         response_text = gemini_response.text
-                    elif hasattr(gemini_response, 'parts') and gemini_response.parts:
-                         # Handle potential multi-part responses
-                         response_text = "".join(part.text for part in gemini_response.parts if hasattr(part, 'text'))
-                    elif hasattr(gemini_response, 'candidates') and gemini_response.candidates:
-                         # Access content safely, checking existence of attributes
-                         candidate = gemini_response.candidates[0]
-                         if hasattr(candidate, 'content') and hasattr(candidate.content, 'parts') and candidate.content.parts:
-                              response_text = "".join(part.text for part in candidate.content.parts if hasattr(part, 'text'))
-
-                except Exception as extract_err:
-                     logging.error(f"Error extracting text from Gemini response: {extract_err}")
-                     response_text = None # Ensure it's None if extraction fails
-
-                if response_text:
-                    response = response_text.strip()
-                    # Apply simple formatting consistency
-                    formatted_gemini_response = ""
-                    lines = response.strip().split('\n')
-                    for line in lines:
-                        line = line.strip()
-                        # Handle common list markers
-                        if line.startswith(('* ', '- ', '• ')):
-                            formatted_gemini_response += f"• {line[2:].strip()}\n"
-                        elif line:
-                            formatted_gemini_response += f"{line}\n"
-                    response = formatted_gemini_response.strip()
-                    logging.info(f"Received and formatted Gemini response for '{query}' in {language_code}.")
-                else:
-                    # Handle cases where Gemini genuinely might not have an answer or response is blocked
-                    error_messages_gemini = {
-                        'en': "I couldn't generate a specific answer for that query right now.",
-                        'ta': "மன்னிக்கவும், அந்த வினவலுக்கு என்னால் தற்போது ஒரு குறிப்பிட்ட பதிலை உருவாக்க முடியவில்லை.",
-                        'te': "క్షమించండి, ప్రస్తుతానికి ఆ ప్రశ్నకు నేను నిర్దిష్ట సమాధానాన్ని రూపొందించలేకపోయాను.",
-                        'ml': "ക്ഷമിക്കണം, ആ ചോദ്യത്തിന് ഇപ്പോൾ ഒരു പ്രത്യേക ഉത്തരം നൽകാൻ എനിക്ക് കഴിഞ്ഞില്ല.",
-                        'hi': "क्षमा करें, मैं इस समय उस प्रश्न के लिए विशिष्ट उत्तर उत्पन्न नहीं कर सका।" # Added Hindi
-                    }
-                    response = error_messages_gemini.get(language_code, error_messages_gemini['en'])
-                    logging.warning(f"Gemini did not return usable text content for query '{query}'. Using default message.")
-
-            except Exception as e:
-                logging.error(f"Gemini API Error while processing query '{query}': {e}", exc_info=True)
-                error_messages_api = {
-                    'en': "Sorry, an internal error occurred while trying to get an answer.",
-                    'ta': "மன்னிக்கவும், பதிலைப் பெற முயற்சிக்கும்போது ஒரு உள் பிழை ஏற்பட்டது.",
-                    'te': "క్షమించండి, సమాధానం పొందడానికి ప్రయత్నిస్తున్నప్పుడు అంతర్గత లోపం సంభవించింది.",
-                    'ml': "ക്ഷമിക്കണം, ഉത്തരം ലഭിക്കാൻ ശ്രമിക്കുമ്പോൾ ഒരു ആന്തരിക പിശക് സംഭവിച്ചു.",
-                    'hi': "क्षमा करें, उत्तर प्राप्त करने का प्रयास करते समय एक आंतरिक त्रुटि हुई।" # Added Hindi
-                }
-                response = error_messages_api.get(language_code, error_messages_api['en'])
-
-        # --- Final Response ---
-        if response is None: # Ultimate fallback (should rarely happen now)
-            logging.warning("All methods (predefined, structured, Gemini) failed to generate a response.")
-            fallback_msgs = {
-                 'en': "Sorry, I couldn't find specific information for your query at this time.",
-                 'ta': "மன்னிக்கவும், உங்கள் வினவலுக்கான குறிப்பிட்ட தகவலை இந்த நேரத்தில் என்னால் கண்டுபிடிக்க முடியவில்லை.",
-                 'te': "క్షమించండి, మీ ప్రశ్నకు సంబంధించిన నిర్దిష్ట సమాచారాన్ని నేను ఈ సమయంలో కనుగొనలేకపోయాను.",
-                 'ml': "ക്ഷമിക്കണം, നിങ്ങളുടെ ചോദ്യത്തിനുള്ള പ്രത്യേക വിവരങ്ങൾ കണ്ടെത്താൻ എനിക്കിപ്പോൾ കഴിഞ്ഞില്ല.",
-                 'hi': "क्षमा करें, मुझे इस समय आपके प्रश्न के लिए विशिष्ट जानकारी नहीं मिल सकी।" # Added Hindi
+        # --- Use the same Gemini logic from the previous answer ---
+        try:
+            language_map = {
+                'en': 'English', 'ta': 'Tamil', 'te': 'Telugu', 'ml': 'Malayalam'
             }
-            response = fallback_msgs.get(language_code, fallback_msgs['en'])
+            language_name = language_map.get(language_code, 'English')
 
-        # --- DETAILED LOGGING: Sending Response ---
-        logging.debug(f"--- Sending Response ---")
-        logging.debug(f"Final Response (Lang: {language_code}):\n{response[:300]}...") # Log start of response
-        logging.debug(f"--- END Request ---")
-        # --- End Logging ---
+            strict_prompt = f"""
+            You are SRM InfoBot, an assistant for SRM University.
+            The user's query is: "{query}"
 
-        return jsonify({"status": "success", "response": response})
+            **VERY IMPORTANT INSTRUCTION:** Your response MUST be **ONLY** in the **{language_name}** language (language code: {language_code}).
+            **DO NOT** use English or any other language unless the requested language is English.
+            **DO NOT** include any explanations about why information might be missing or unavailable in {language_name}.
+            **DO NOT** apologize for missing information.
+
+            If you have specific, factual information about SRM University relevant to the query "{query}", provide it concisely in **{language_name}**.
+            If you do NOT have specific SRM information for the query "{query}", provide a *general* answer about the topic (like campus life, admissions, etc.) based on typical university information, but ensure the answer is still **strictly and ONLY in {language_name}**.
+
+            Generate ONLY the answer text in **{language_name}**. No preambles, no apologies, no language explanations. Format the response clearly, using bullet points (like • point) if appropriate for lists.
+            """
+
+            logging.debug(f"Sending prompt to Gemini:\n{strict_prompt}")
+            gemini_response = model.generate_content(strict_prompt)
+
+            # Extract text (ensure this part matches your Gemini library version)
+            response_text = None
+            if hasattr(gemini_response, 'text') and gemini_response.text:
+                 response_text = gemini_response.text
+            elif hasattr(gemini_response, 'parts') and gemini_response.parts:
+                 response_text = "".join(part.text for part in gemini_response.parts)
+            elif hasattr(gemini_response, 'candidates') and gemini_response.candidates and gemini_response.candidates[0].content.parts:
+                 response_text = gemini_response.candidates[0].content.parts[0].text
+
+            if response_text:
+                final_response = response_text.strip()
+                 # Basic formatting similar to KB/Predefined for consistency
+                formatted_gemini_response = ""
+                lines = final_response.strip().split('\n')
+                for line in lines:
+                    line = line.strip()
+                     # Gemini might already use *, -, or • for bullets
+                    if line.startswith(('* ', '- ', '• ')):
+                        formatted_gemini_response += f"\n• {line[2:].strip()}\n"
+                    elif line:
+                        formatted_gemini_response += f"\n{line}\n"
+                final_response = formatted_gemini_response.strip()
+
+                logging.info(f"Received Gemini response for '{query}' in {language_code}.")
+            else:
+                error_messages_gemini = {
+                    'en': "Sorry, I couldn't generate a specific answer for that query at the moment.",
+                    'ta': "மன்னிக்கவும், அந்த வினவலுக்கு என்னால் ஒரு குறிப்பிட்ட பதிலை உருவாக்க முடியவில்லை.",
+                    'te': "క్షమించండి, ప్రస్తుతానికి ఆ ప్రశ్నకు నేను నిర్దిష్ట సమాధానాన్ని రూపొందించలేకపోయాను.",
+                    'ml': "ക്ഷമിക്കണം, ആ ചോദ്യത്തിന് ഒരു പ്രത്യേക ഉത്തരം നൽകാൻ എനിക്ക് കഴിഞ്ഞില്ല.",
+                     'hi': "क्षमा करें, मैं इस समय उस प्रश्न के लिए विशिष्ट उत्तर उत्पन्न नहीं कर सका।" # Added Hindi
+                }
+                final_response = error_messages_gemini.get(language_code, error_messages_gemini['en'])
+                logging.warning(f"Gemini did not generate text content for query '{query}'.")
+
+            return jsonify({
+                "status": "success",
+                "response": final_response
+            })
+
+        except Exception as e:
+            logging.error(f"Gemini API Error while processing query '{query}': {e}", exc_info=True)
+            error_messages_api = {
+                'en': "Sorry, an internal error occurred while trying to get an answer.",
+                'ta': "மன்னிக்கவும், பதிலைப் பெற முயற்சிக்கும்போது ஒரு உள் பிழை ஏற்பட்டது.",
+                'te': "క్షమించండి, సమాధానం పొందడానికి ప్రయత్నిస్తున్నప్పుడు అంతర్గత లోపం సంభవించింది.",
+                'ml': "ക്ഷമിക്കണം, ഉത്തരം ലഭിക്കാൻ ശ്രമിക്കുമ്പോൾ ഒരു ആന്തരിക പിശക് സംഭവിച്ചു.",
+                'hi': "क्षमा करें, उत्तर प्राप्त करने का प्रयास करते समय एक आंतरिक त्रुटि हुई।" # Added Hindi
+            }
+            error_response = error_messages_api.get(language_code, error_messages_api['en'])
+            # Ensure response structure is consistent even on error
+            return jsonify({"status": "error", "message": "Gemini API Error", "response": error_response}), 500
 
     except Exception as e:
-        # --- LOGGING: Unexpected Error ---
-        logging.exception(f"Unexpected error in query_knowledge_base for query='{query or 'No query provided'}' language='{language_code}'")
+        logging.exception(f"Unexpected error in query_knowledge_base for query '{query or 'No query provided'}'")
         # Ensure response structure is consistent even on error
         error_messages_server = {
             'en': "Sorry, a server error occurred.",
@@ -699,48 +593,36 @@ def query_knowledge_base():
             'hi': "क्षमा करें, एक सर्वर त्रुटि हुई।" # Added Hindi
          }
         server_error_response = error_messages_server.get(language_code, error_messages_server['en'])
-        # --- DETAILED LOGGING: Error Response ---
-        logging.debug(f"--- Sending Error Response ---")
-        logging.debug(f"Error Response (Lang: {language_code}): {server_error_response}")
-        logging.debug(f"--- END Request (Error) ---")
-        # --- End Logging ---
         return jsonify({"status": "error", "message": str(e), "response": server_error_response}), 500
+# Function to initialize the knowledge base
+@app.route("/api/init-knowledge-base", methods=["GET"])
+def init_knowledge_base():
+    try:
+        logging.info("Initializing knowledge base...")
+        scraper_manager.check_and_update()
+        knowledge_base.knowledge_base = knowledge_base.load_data()  # Reload the data after scraping
+        logging.info("Knowledge base initialized successfully")
+        return jsonify({"status": "success"})
 
-# Function to initialize the knowledge base - REMOVED
-# @app.route("/api/init-knowledge-base", methods=["GET"]) # REMOVED
-# def init_knowledge_base(): # REMOVED
-    # ... (removed function body) ...
+    except Exception as e:
+        logging.exception("Error initializing knowledge base")
+        return jsonify({"status": "error", "message": str(e)}), 500
 
-# EEL setup and execution - KEPT
+# EEL setup and execution
 eel.init("web")
 
 def start_flask():
-    # Use use_reloader=False to prevent Flask from running the init code twice in debug mode
-    app.run(host="localhost", port=8081, debug=True, use_reloader=False)
+    app.run(host="localhost", port=5000, debug=True)  # Enable debug mode
 
 def main():
     flask_thread = Thread(target=start_flask, daemon=True)
     flask_thread.start()
 
     try:
-        # Consider adding block=False if you need the main Python thread to do other things,
-        # but for a simple EEL app, blocking is usually fine.
-        eel.start("index.html", mode="chrome", port=8081, size=(1200, 800))
+        eel.start("index.html", mode="chrome", port=8000, size=(1200, 800))
     except (SystemExit, KeyboardInterrupt):
         print("Shutting down the application...")
-        # Optionally add cleanup code here if needed
-    except Exception as e:
-        # Catch potential EEL start errors (e.g., Chrome not found)
-        logging.error(f"Failed to start EEL GUI: {e}")
-        print(f"Error: Failed to start the application GUI. Please ensure Chrome/Edge is installed. {e}")
-    finally:
-         # Ensure Flask thread stops if EEL exits abnormally
-         # (Though daemon=True should handle this, adding explicit exit might be safer in some scenarios)
-         print("Exiting main thread.")
-         sys.exit(0) # Ensure the script exits
-
+        sys.exit(0)
 
 if __name__ == "__main__":
     main()
-
-# --- END OF FILE app.py ---
